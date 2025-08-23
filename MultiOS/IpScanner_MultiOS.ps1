@@ -13,11 +13,6 @@
   The script uses a multithreaded approach with a "RunspacePool" to perform pings
   concurrently, which significantly speeds up the scanning process. This is much
   more efficient than pinging each IP address sequentially.
-
-.NOTES
-  Author: Gemini
-  Version: 1.2 (Corrected ForEach-Object -Parallel usage)
-  Date: 2024-08-23
 #>
 
 # Requires PowerShell 6.0 or later for cross-platform support and features like ForEach-Object -Parallel.
