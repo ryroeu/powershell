@@ -1,91 +1,242 @@
-# --- How to Use ---
+<# 
+.SYNOPSIS
+  Archive (optional) and clear Windows Event Logs locally or on remote computers.
 
-# Example 1: Clear logs on the local machine (will prompt for confirmation)
-# Clear-AllWinEventLogs
+.DESCRIPTION
+  - Discovers logs via Get-WinEvent -ListLog (supports remote).
+  - Optionally archives each log to .evtx before clearing (timestamped, one file per log).
+  - Clears logs using Clear-WinEvent (works on PowerShell 5.1 and 7+).
+  - Filters: include/exclude by log name pattern, only enabled logs, minimum record count.
+  - Safe: Supports -WhatIf and -Confirm; prints a summary at the end.
 
-# Example 2: Clear logs on a remote machine (will prompt for confirmation)
-# Clear-AllWinEventLogs -ComputerName "SERVER01"
+.EXAMPLES
+  # Clear common logs locally after archiving to C:\Logs\Archive
+  .\ClearEventLogs.ps1 -ArchivePath C:\Logs\Archive -Include "Application","System","Security" -Confirm
 
-# Example 3: Run without confirmation (Use with caution!)
-# Clear-AllWinEventLogs -Confirm:$false
+  # All enabled logs on two servers, skip archive, only logs with > 1000 records
+  .\ClearEventLogs.ps1 -ComputerName srv1,srv2 -MinRecordCount 1000 -SkipArchive -Force
 
-# Example 4: See what would happen without actually clearing (using -WhatIf)
-# Clear-AllWinEventLogs -WhatIf
+  # Preview what would happen
+  .\ClearEventLogs.ps1 -Include 'Microsoft-Windows-*' -WhatIf
+#>
 
-# Example 5: Show verbose messages during execution
-# Clear-AllWinEventLogs -Verbose
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
+param(
+  [string[]] $ComputerName = @($env:COMPUTERNAME),
 
-# --- To run the script on the local machine immediately (like the original): ---
-# Clear-AllWinEventLogs -ComputerName localhost -Confirm:$false # Be careful!
+  # Filter which logs to touch (wildcards OK). If omitted, all logs are considered.
+  [string[]] $Include,
 
-function Clear-AllWinEventLogs {
-   [CmdletBinding(SupportsShouldProcess = $true)]
-   param(
-       [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-       [string]$ComputerName = $env:COMPUTERNAME # Default to local machine using environment variable
-   )
+  # Logs to exclude (wildcards OK).
+  [string[]] $Exclude,
 
-   #Requires -RunAsAdministrator # Add this line to enforce running as admin in PS 5+ environments
-                                # In PS Core, manual check might still be needed or rely on Clear-WinEvent errors
+  # Only process logs that currently have at least this many records.
+  [int] $MinRecordCount = 0,
 
-   # Check for Elevated Privileges (more cross-version compatible check)
-   $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-   $principal = [System.Security.Principal.WindowsPrincipal]::new($currentUser)
-   if (-not $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
-       Write-Warning "This script needs to be run with Administrator privileges to clear all event logs."
-       # Optionally, you could force an exit here:
-       # throw "Administrator privileges required."
-       # Or just continue and let Clear-WinEvent fail on restricted logs.
-   }
+  # Process only enabled logs (recommended). Use -AllLogs to override.
+  [switch] $OnlyEnabled,
+  [switch] $AllLogs,
 
-   Write-Verbose "Retrieving list of event logs from computer: $ComputerName"
-   $logNames = @() # Initialize empty array
+  # Archive options
+  [string] $ArchivePath,   # local path (for local runs) or UNC. If remote and local path, script will pull files back.
+  [switch] $SkipArchive,
 
-   try {
-       # Get-WinEvent -ListLog * can sometimes be slow or error on specific providers.
-       # Filter for log names that are commonly clearable. You might adjust this.
-       # This gets log names directly. Avoids issues with provider names vs log names.
-       $logNames = Get-WinEvent -ListLog * -ComputerName $ComputerName -ErrorAction Stop | Select-Object -ExpandProperty LogName
-       Write-Verbose "Found $($logNames.Count) event logs."
-   }
-   catch {
-       Write-Error "Failed to retrieve event log list from $ComputerName. Error: $($_.Exception.Message)"
-       return # Exit the function if we can't get the log list
-   }
+  # Remoting options
+  [pscredential] $Credential,
+  [switch] $UseSSL,
 
-   if ($logNames.Count -eq 0) {
-       Write-Warning "No event logs found or retrieved from $ComputerName."
-       return
-   }
+  # Behavior
+  [switch] $Force,         # suppresses per-log confirmation prompts
+  [switch] $VerboseSummary # show per-log counts in summary
+)
 
-   foreach ($logName in $logNames) {
-       # Check if the operation should proceed (handles -Confirm and -WhatIf)
-       if ($PSCmdlet.ShouldProcess("'$logName' on computer '$ComputerName'", "Clear Event Log")) {
-           Write-Verbose "Attempting to clear log: $logName on $ComputerName"
-           try {
-               # Clear the specific log
-               # Use -ErrorAction Stop to force errors into the catch block
-               # Use -WarningAction SilentlyContinue to suppress warnings about logs that cannot be cleared (e.g., Debug/Analytic)
-               Clear-WinEvent -LogName $logName -ComputerName $ComputerName -ErrorAction Stop -WarningAction SilentlyContinue
-               Write-Verbose "Successfully cleared or attempted to clear log: $logName"
-           }
-           catch [System.UnauthorizedAccessException] {
-               Write-Warning "Access denied clearing log '$logName' on $ComputerName. Requires elevated permissions."
-           }
-           catch {
-               # Catch other potential errors
-               Write-Warning "Could not clear log '$logName' on $ComputerName. Error: $($_.Exception.Message)"
-               # Some logs (like certain Debug/Analytic logs) cannot be cleared by design.
-               # Clear-WinEvent might throw an error or issue a warning (suppressed above).
-           }
-       }
-   }
+begin {
+  $ErrorActionPreference = 'Stop'
 
-   Write-Host "Finished attempting to clear all accessible event logs on $ComputerName."
+  function Test-Admin {
+    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $p  = New-Object Security.Principal.WindowsPrincipal($id)
+    return $p.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+  }
 
-   # Optional: Re-list logs or show status if desired, but removed for simplicity.
-   # Get-WinEvent -ListLog * -ComputerName $ComputerName | Select-Object LogName, RecordCount, IsEnabled, LogMode
+  if (-not (Test-Admin)) {
+    throw "This script must be run elevated (Administrator)."
+  }
+
+  function Get-LogList {
+    param(
+      [string] $Computer,
+      [pscredential] $Cred
+    )
+    # Get-WinEvent supports -ComputerName and returns LogDefinition objects
+    $params = @{ ListLog='*'; ComputerName=$Computer; ErrorAction='Stop' }
+    if ($Cred) { $params.Credential = $Cred }
+
+    $logs = Get-WinEvent @params
+
+    if (-not $AllLogs) {
+      if ($OnlyEnabled) { $logs = $logs | Where-Object { $_.IsEnabled } }
+    }
+
+    if ($Include) {
+      $patterns = $Include
+      $logs = $logs | Where-Object {
+        foreach ($p in $patterns) { if ($_.LogName -like $p) { return $true } }
+        return $false
+      }
+    }
+
+    if ($Exclude) {
+      $ex = $Exclude
+      $logs = $logs | Where-Object {
+        foreach ($x in $ex) { if ($_.LogName -like $x) { return $false } }
+        return $true
+      }
+    }
+
+    if ($MinRecordCount -gt 0) {
+      $logs = $logs | Where-Object { $_.RecordCount -ge $MinRecordCount }
+    }
+
+    $logs | Sort-Object LogName
+  }
+
+  function Invoke-Remote {
+    param(
+      [string] $Computer,
+      [scriptblock] $ScriptBlock,
+      [hashtable] $ParamHash
+    )
+    if ($Computer -in @($env:COMPUTERNAME, 'localhost', '.')) {
+      & $ScriptBlock @ParamHash
+      return
+    }
+
+    $sessParams = @{ ComputerName=$Computer; Authentication='Default' }
+    if ($Credential) { $sessParams.Credential = $Credential }
+    if ($UseSSL)     { $sessParams.UseSSL = $true }
+
+    $sess = New-PSSession @sessParams
+    try {
+      Invoke-Command -Session $sess -ScriptBlock $ScriptBlock -ArgumentList ($ParamHash.Values)
+    }
+    finally {
+      Remove-PSSession $sess
+    }
+  }
+
+  # Remote export + clear block (runs on target when remote)
+  $sbExportAndClear = {
+    param($LogName, $DoArchive, $DestPath, $TimeStamp, $ForceFlag)
+    $ErrorActionPreference = 'Stop'
+
+    if ($DoArchive -and $DestPath) {
+      # Ensure target folder exists
+      New-Item -ItemType Directory -Path $DestPath -Force | Out-Null
+      $safe = ($LogName -replace '[\\/:\*\?\"<>\|]', '_')
+      $file = Join-Path $DestPath ("{0}_{1}.evtx" -f $safe, $TimeStamp)
+      # Export using wevtutil (fast and reliable). Export-PSSession alternatives don't apply.
+      wevtutil epl "$LogName" "$file"
+    }
+
+    # Clear log
+    if ($ForceFlag) {
+      Clear-WinEvent -LogName $LogName -ErrorAction Stop
+    } else {
+      Clear-WinEvent -LogName $LogName -Confirm
+    }
+
+    # Return a tiny object for summary
+    try {
+      $after = (Get-WinEvent -ListLog $LogName).RecordCount
+    } catch {
+      $after = $null
+    }
+
+    [pscustomobject]@{ LogName=$LogName; Cleared=$true; Remaining=$after }
+  }
+
+  $summary = New-Object System.Collections.Generic.List[object]
+  $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
 }
 
-# Recommended execution (prompts for confirmation):
-Clear-AllWinEventLogs -ComputerName localhost -Verbose
+process {
+  foreach ($computer in $ComputerName) {
+    Write-Verbose "Processing $computer ..."
+
+    # Build list
+    $logs = Get-LogList -Computer $computer -Cred $Credential
+    if (-not $logs) {
+      Write-Host "[$computer] No logs matched the criteria." -ForegroundColor Yellow
+      continue
+    }
+
+    # Decide archive path per computer
+    $remoteArchiveUNC = $null
+    $pullBack = $false
+
+    if (-not $SkipArchive -and $ArchivePath) {
+      if ($computer -in @($env:COMPUTERNAME, 'localhost', '.')) {
+        $remoteArchiveUNC = Join-Path $ArchivePath $computer
+      } else {
+        # If ArchivePath is UNC, write there directly from remote.
+        if ($ArchivePath -match '^[\\\\]{2,}') {
+          $remoteArchiveUNC = Join-Path $ArchivePath $computer
+        } else {
+          # Use temp on remote; we will pull back after clearing.
+          $remoteArchiveUNC = "C:\Windows\Temp\EventArchive\$computer"
+          $pullBack = $true
+        }
+      }
+    }
+
+    foreach ($log in $logs) {
+      $target = "$computer :: $($log.LogName)"
+      $doArchive = (-not $SkipArchive) -and [string]::IsNullOrEmpty($ArchivePath) -eq $false
+
+      if ($PSCmdlet.ShouldProcess($target, "$(if($doArchive){'Archive & '})Clear")) {
+        $logArgs = @{
+          LogName   = $log.LogName
+          DoArchive = $doArchive
+          DestPath  = $remoteArchiveUNC
+          TimeStamp = $ts
+          ForceFlag = $Force.IsPresent
+        }
+
+        try {
+          $result = Invoke-Remote -Computer $computer -ScriptBlock $sbExportAndClear -ParamHash $logArgs
+          if ($result) { $summary.Add([pscustomobject]@{ Computer=$computer; LogName=$result.LogName; Cleared=$true; Remaining=$result.Remaining }) }
+          if ($doArchive -and $pullBack) {
+            # Pull archives back to local ArchivePath\<computer>
+            $sessParams = @{ ComputerName=$computer }
+            if ($Credential) { $sessParams.Credential = $Credential }
+            if ($UseSSL)     { $sessParams.UseSSL = $true }
+            $sess = New-PSSession @sessParams
+            try {
+              $remoteDir = $remoteArchiveUNC
+              $localDir  = Join-Path $ArchivePath $computer
+              New-Item -ItemType Directory -Path $localDir -Force | Out-Null
+              Copy-Item -FromSession $sess -Path (Join-Path $remoteDir '*') -Destination $localDir -Force -ErrorAction SilentlyContinue
+            }
+            finally { Remove-PSSession $sess }
+          }
+        }
+        catch {
+          Write-Warning "[$computer] $($log.LogName): $($_.Exception.Message)"
+          $summary.Add([pscustomobject]@{ Computer=$computer; LogName=$log.LogName; Cleared=$false; Remaining=$log.RecordCount })
+        }
+      }
+    }
+  }
+}
+
+end {
+  # Summary
+  if ($VerboseSummary) {
+    $summary | Sort-Object Computer,LogName | Format-Table Computer,LogName,Cleared,Remaining -Auto
+  } else {
+    $ok = ($summary | Where-Object Cleared).Count
+    $bad = ($summary | Where-Object { -not $_.Cleared }).Count
+    Write-Host ("Completed. Logs cleared: {0}, Failed: {1}" -f $ok, $bad) -ForegroundColor Green
+  }
+}
