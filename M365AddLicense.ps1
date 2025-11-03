@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Ensure-Module {
+function Install-RequiredModule {
   param([string]$Name,[string]$MinVersion='0.0.0')
   if (-not (Get-Module -ListAvailable -Name $Name)) {
     Write-Host "Installing module $Name..." -ForegroundColor Yellow
@@ -28,7 +28,7 @@ function Ensure-Module {
   Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
 }
 
-Ensure-Module Microsoft.Graph -MinVersion '2.12.0'
+Install-RequiredModule Microsoft.Graph -MinVersion '2.12.0'
 
 $scopes = @('User.ReadWrite.All','Directory.ReadWrite.All')
 if ($ForceDeviceCode) {

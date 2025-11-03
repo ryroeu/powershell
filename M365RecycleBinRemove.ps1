@@ -23,13 +23,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-function Ensure-Module {[CmdletBinding()]param([string]$Name,[string]$MinVersion='0.0.0')
+function Install-ModuleIfMissing {[CmdletBinding()]param([string]$Name,[string]$MinVersion='0.0.0')
   if (-not (Get-Module -ListAvailable -Name $Name)) { Install-Module $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber }
   Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
 }
 
 if ($PurgeDeletedUsers) {
-  Ensure-Module Microsoft.Graph -MinVersion '2.12.0'
+  Install-ModuleIfMissing Microsoft.Graph -MinVersion '2.12.0'
   $scopes = @('Directory.AccessAsUser.All','User.ReadWrite.All')
   if ($ForceDeviceCode){ Connect-MgGraph -Scopes $scopes -UseDeviceCode -NoWelcome } else { Connect-MgGraph -Scopes $scopes -NoWelcome }
   $deleted = Get-MgDirectoryDeletedItemAsUser -All -ErrorAction SilentlyContinue

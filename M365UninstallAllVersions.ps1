@@ -38,6 +38,7 @@ $config = @"
   <Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />
 </Configuration>
 "@
+
 $configPath = Join-Path $WorkDir "RemoveAll.xml"
 $config | Set-Content -Path $configPath -Encoding UTF8
 

@@ -14,15 +14,15 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-function Ensure-Module {
+function Install-ModuleIfNeeded {
   param([string]$Name,[string]$MinVersion='0.0.0')
   if (-not (Get-Module -ListAvailable -Name $Name)) {
-    Install-Module $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
+    Install-Module -Name $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
   }
-  Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
+  Import-Module -Name $Name -MinimumVersion $MinVersion -ErrorAction Stop
 }
 
-Ensure-Module ExchangeOnlineManagement -MinVersion '3.4.0'
+Install-ModuleIfNeeded ExchangeOnlineManagement -MinVersion '3.4.0'
 
 if ($Compliance) {
   if ($ForceDeviceCode) {

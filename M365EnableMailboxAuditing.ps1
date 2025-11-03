@@ -13,7 +13,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-function Ensure-Module {
+function Install-ModuleIfMissing {
   param([string]$Name,[string]$MinVersion='0.0.0')
   if (-not (Get-Module -ListAvailable -Name $Name)) {
     Install-Module $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
@@ -21,7 +21,7 @@ function Ensure-Module {
   Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
 }
 
-Ensure-Module ExchangeOnlineManagement -MinVersion '3.4.0'
+Install-ModuleIfMissing ExchangeOnlineManagement -MinVersion '3.4.0'
 
 if ($ForceDeviceCode) {
   Connect-ExchangeOnline -UseDeviceAuthentication | Out-Null
