@@ -1,15 +1,45 @@
-#This script will enable non-owner mailbox access auditing on every mailbox in your tenancy
-#First, let's get us a cred!
-Import-Module Microsoft.Exchange
+<# 
+.SYNOPSIS
+  Verify/enable mailbox auditing using ExchangeOnlineManagement v3+ (auditing is on by default).
 
-$userCredential = Get-Credential
+.EXAMPLE
+  .\O365EnableMailboxAuditing.ps1 -EnsureEnabled
+#>
+[CmdletBinding()]
+param(
+  [switch] $EnsureEnabled,     # set org auditing on if disabled
+  [switch] $ReportOnly,        # show current values only
+  [switch] $ForceDeviceCode
+)
+$ErrorActionPreference = 'Stop'
 
-#This gets us connected to an Exchange remote powershell service
-$ExoSession = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $userCredential -Authentication Basic -AllowRedirection
-Import-PSSession $ExoSession
+function Ensure-Module {
+  param([string]$Name,[string]$MinVersion='0.0.0')
+  if (-not (Get-Module -ListAvailable -Name $Name)) {
+    Install-Module $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
+  }
+  Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
+}
 
-#Enable global audit logging
-Get-Mailbox -ResultSize Unlimited -Filter {RecipientTypeDetails -eq "UserMailbox" -or RecipientTypeDetails -eq "SharedMailbox" -or RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "DiscoveryMailbox"}| Set-Mailbox -AuditEnabled $true -AuditLogAgeLimit 365 -AuditOwner Create,HardDelete,MailboxLogin,MoveToDeletedItems,SoftDelete,Update
+Ensure-Module ExchangeOnlineManagement -MinVersion '3.4.0'
 
-#Double-Check It!
-Get-Mailbox -ResultSize Unlimited | Select-Object Name, AuditEnabled, AuditLogAgeLimit | Out-Gridview
+if ($ForceDeviceCode) {
+  Connect-ExchangeOnline -UseDeviceAuthentication | Out-Null
+} else {
+  Connect-ExchangeOnline | Out-Null
+}
+
+$org = Get-OrganizationConfig
+Write-Host ("AuditDisabled: {0}" -f $org.AuditDisabled) -ForegroundColor Cyan
+Write-Host ("DefaultAuditSet (current build default): {0}" -f ($org.DefaultAuditSet -join ',')) -ForegroundColor Cyan
+
+if ($ReportOnly) { return }
+
+if ($EnsureEnabled -and $org.AuditDisabled) {
+  Write-Host "Enabling org-wide mailbox auditing..." -ForegroundColor Yellow
+  Set-OrganizationConfig -AuditDisabled:$false
+  $org = Get-OrganizationConfig
+  Write-Host ("AuditDisabled: {0}" -f $org.AuditDisabled) -ForegroundColor Green
+}
+
+Disconnect-ExchangeOnline -Confirm:$false | Out-Null
