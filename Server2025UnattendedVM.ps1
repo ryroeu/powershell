@@ -24,6 +24,13 @@ If supplied, will create <Edition>-Unattended.iso using oscdimg when available.
 Path to original Microsoft ISO when using -BuildISO.
 .EXAMPLE
 .\New-ServerUnattended.ps1 -OutputDir C:\Temp -Edition "Windows Server 2025 Standard (Desktop Experience)" -BuildISO -SourceISO D:\ISOs\Windows_Server_2025.iso -AdministratorPassword P@ssw0rd!
+.EXAMPLE
+# Create an answer file & ISO for Windows Server 2025 Standard (Desktop Experience)
+.\New-ServerUnattended.ps1 -OutputDir C:\Temp -Edition "Windows Server 2025 Standard (Desktop Experience)" -BuildISO -SourceISO D:\ISOs\Windows_Server_2025.iso -AdministratorPassword P@ssw0rd!
+.EXAMPLE
+# Create a VM and boot it from the unattended ISO
+.\New-ServerVM.ps1 -Name WS2025-DC -VHDXPath D:\VMs -ISOPath C:\Temp\Windows_Server_2025_Standard_Desktop_Experience-Unattended.iso -SwitchName "Lab" -EnableTPM
+Start-VM WS2025-DC
 #>
 [CmdletBinding()]
 param(
