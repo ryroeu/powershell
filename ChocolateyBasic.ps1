@@ -17,10 +17,10 @@ choco install az.powershell
 choco install azure-cli
 
 # Browsers
-choco install brave -y
-choco install firefox -y
-choco install googlechrome -y
-choco install waterfox -y
+choco install brave
+choco install firefox
+choco install googlechrome
+choco install waterfox
 
 # DevOps
 choco install python

@@ -7,7 +7,6 @@ Set-ExecutionPolicy Unrestricted -Scope Process -Force
 choco install chocolatey-core.extension -y
 choco install chocolateygui -y
 choco install chocolateypackageupdater -y
-choco upgrade chocolatey
 
 # AMD
 choco install amd-ryzen-chipset -y
@@ -179,7 +178,7 @@ choco install wireshark -y
 choco install openvpn -y
 choco install putty -y
 choco install royalts-v7-x64 -y
-#choco install royalts-v7-arm64
+#choco install royalts-v7-arm64 -y
 choco install teamviewer -y
 choco install teamviewer-qs -y
 
