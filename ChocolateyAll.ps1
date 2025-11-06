@@ -103,12 +103,12 @@ choco install intel-dsa
 choco install intel-graphics-driver
 
 # Java
-choco install jdk8
+choco install openjdk
 choco install jre8
 
 # Microsoft
-choco install dotnet-9.0-runtime
-choco install dotnet-9.0-sdk
+choco install dotnet
+choco install dotnetfx
 choco install microsoft-teams
 choco install microsoft-windows-terminal
 choco install nugetpackagemanager

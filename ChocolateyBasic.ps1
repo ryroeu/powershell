@@ -40,14 +40,15 @@ choco install vagrant
 choco install vault
 
 # Java
-choco install jdk8
-choco install jre8
+choco install openjdk
 
 # Microsoft
-choco install dotnet-9.0-sdk
+choco install dotnet
+choco install dotnetfx
 choco install microsoft-teams
 choco install nugetpackagemanager
 choco install office365business
+choco install powershell-core
 choco install powertoys
 choco install psexec
 choco install pstools

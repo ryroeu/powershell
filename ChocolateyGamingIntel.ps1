@@ -36,10 +36,11 @@ choco install intel-dsa -y
 choco install intel-graphics-driver -y
 
 # Java
-choco install jdk20 -y
+choco install openjdk -y
 
 # Microsoft
 choco install dotnet -y
+choco install dotnetfx -y
 choco install microsoft-teams -y
 choco install microsoft-windows-terminal -y
 choco install nugetpackagemanager -y
@@ -56,7 +57,6 @@ choco install sysinternals -y
 choco install vcredist140 -y
 choco install vscode -y
 choco install vscode-powershell -y
-choco install wsl2 -y
 
 # Nord
 choco install nordpass -y
