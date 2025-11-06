@@ -1,7 +1,11 @@
 # Set Execution Policy
 Set-ExecutionPolicy Unrestricted -Scope Process -Force
+
 # Install Chocolatey
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# Enable Global Confirmation
+choco feature enable -n allowGlobalConfirmation
 
 # Chocolatey Extensions and Updates
 choco install chocolatey-core.extension -y
@@ -154,15 +158,12 @@ choco install virtualbox -y
 choco install virtualbox-guest-additions-guest.install -y
 
 # vmWare
-choco install vmrc -y
 choco install vmware-powercli-psmodule -y
 choco install vmware-tools -y
-choco install vmwarevsphereclient -y
 choco install vmwareworkstation -y
 
 # Zoom
 choco install zoom -y
-choco install zoom-outlook -y
 
 # Utilities - FTP
 choco install filezilla -y
