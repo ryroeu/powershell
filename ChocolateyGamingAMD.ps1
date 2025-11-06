@@ -17,7 +17,6 @@ choco install trafficlight-firefox -y
 # Browsers
 choco install firefox -y
 choco install googlechrome -y
-choco install microsoft-edge -y
 choco install waterfox -y
 
 # CPU-Z

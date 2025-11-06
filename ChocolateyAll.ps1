@@ -33,7 +33,6 @@ choco install trafficlight-firefox
 choco install chromium
 choco install firefox
 choco install googlechrome
-choco install microsoft-edge
 choco install tor-browser
 choco install waterfox
 
