@@ -108,4 +108,3 @@ choco install crystaldiskinfo -y
 choco install dependencywalker -y
 choco install speedtest -y
 choco install treesizefree -y
-choco install utorrent -y

@@ -193,4 +193,3 @@ choco install dropbox -y
 choco install slack -y
 choco install speedtest -y
 choco install treesizefree -y
-choco install utorrent -y
