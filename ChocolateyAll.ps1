@@ -107,10 +107,10 @@ choco install jdk8
 choco install jre8
 
 # Microsoft
+choco install dotnet-9.0-runtime
+choco install dotnet-9.0-sdk
 choco install microsoft-teams
 choco install microsoft-windows-terminal
-choco install netfx-4.8.1
-choco install netfx-4.8.1-devpack
 choco install nugetpackagemanager
 choco install office365business
 choco install onedrive
@@ -131,7 +131,6 @@ choco install vscode-go
 choco install vscode-java
 choco install vscode-powershell
 choco install vscode-yaml
-choco install wsl2
 
 # Nord
 choco install nordpass
@@ -163,7 +162,6 @@ choco install vmware-powercli-psmodule
 choco install vmware-tools
 choco install vmwarevsphereclient
 choco install vmwareworkstation
-choco install vmware-workstation-player
 
 # Zoom
 choco install zoom
@@ -182,7 +180,8 @@ choco install wireshark
 # Utilities - Remote
 choco install openvpn
 choco install putty
-choco install royalts-v6
+choco install royalts-v7-x64
+#choco install royalts-v7-arm64
 choco install teamviewer
 choco install teamviewer-qs
 
