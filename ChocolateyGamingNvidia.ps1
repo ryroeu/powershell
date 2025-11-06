@@ -51,7 +51,6 @@ choco install powershell-core -y
 choco install powertoys -y
 choco install psexec -y
 choco install pstools -y
-choco install pswindowsupdate -y
 choco install rsat -y
 choco install sysinternals -y
 choco install vcredist140 -y

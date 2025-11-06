@@ -120,7 +120,6 @@ choco install powershell-core
 choco install powertoys
 choco install psexec
 choco install pstools
-choco install pswindowsupdate
 choco install rsat
 choco install sql-server-management-studio
 choco install sysinternals
