@@ -16,6 +16,12 @@ choco install awstools.powershell
 choco install az.powershell
 choco install azure-cli
 
+# Browsers
+choco install brave -y
+choco install firefox -y
+choco install googlechrome -y
+choco install waterfox -y
+
 # DevOps
 choco install python
 choco install sudo
