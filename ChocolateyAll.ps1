@@ -186,15 +186,10 @@ choco install teamviewer-qs -y
 # Miscellaneous
 choco install 7zip -y
 choco install adobereader -y
-choco install authy-desktop -y
 choco install ccleaner -y
-choco install citrix-workspace -y
 choco install crystaldiskinfo -y
-choco install datadog-agent -y
 choco install dependencywalker -y
 choco install dropbox -y
-choco install greenshot -y
-choco install itunes -y
 choco install slack -y
 choco install speedtest -y
 choco install treesizefree -y

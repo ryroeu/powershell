@@ -104,10 +104,8 @@ choco install royalts-v7-arm64 -y
 # Miscellaneous
 choco install 7zip -y
 choco install adobereader -y
-choco install authy-desktop -y
 choco install crystaldiskinfo -y
 choco install dependencywalker -y
-choco install greenshot -y
 choco install speedtest -y
 choco install treesizefree -y
 choco install utorrent -y
