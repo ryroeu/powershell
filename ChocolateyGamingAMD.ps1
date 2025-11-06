@@ -8,78 +8,78 @@ Set-ExecutionPolicy Unrestricted -Scope Process -Force
 choco feature enable -n allowGlobalConfirmation
 
 # Chocolatey Extensions and Updates
-choco install chocolatey-core.extension -y
-choco install chocolateygui -y
-choco install chocolateypackageupdater -y
+choco install chocolatey-core.extension 
+choco install chocolateygui 
+choco install chocolateypackageupdater 
 
 # AMD
-choco install amd-ryzen-chipset -y
+choco install amd-ryzen-chipset 
 
 # BitDefender
-choco install bitdefender-usb-immunizer -y
-choco install trafficlight-chrome -y
-choco install trafficlight-firefox -y
+choco install bitdefender-usb-immunizer 
+choco install trafficlight-chrome 
+choco install trafficlight-firefox 
 
 # Browsers
-choco install firefox -y
-choco install googlechrome -y
-choco install waterfox -y
+choco install firefox 
+choco install googlechrome 
+choco install waterfox 
 
 # CPU-Z
-choco install cpu-z -y
-choco install hwmonitor -y
+choco install cpu-z 
+choco install hwmonitor 
 
 # Gaming
-choco install discord -y
-choco install ea-app -y
-choco install steam -y
-choco install ubisoft-connect -y
+choco install discord 
+choco install ea-app 
+choco install steam 
+choco install ubisoft-connect 
 
 # Google
-choco install googledrive -y
-choco install googleearthpro -y
+choco install googledrive 
+choco install googleearthpro 
 
 # Intel
-choco install intel-dsa -y
-choco install intel-graphics-driver -y
+choco install intel-dsa 
+choco install intel-graphics-driver 
 
 # Java
-choco install openjdk -y
+choco install openjdk 
 
 # Microsoft
-choco install dotnet -y
-choco install dotnetfx -y
-choco install microsoft-teams -y
-choco install microsoft-windows-terminal -y
-choco install nugetpackagemanager -y
-choco install office365business -y
-choco install onedrive -y
-choco install onenote -y
-choco install powershell-core -y
-choco install powertoys -y
-choco install psexec -y
-choco install pstools -y
-choco install rsat -y
-choco install sysinternals -y
-choco install vcredist140 -y
-choco install vscode -y
-choco install vscode-powershell -y
+choco install dotnet 
+choco install dotnetfx 
+choco install microsoft-teams 
+choco install microsoft-windows-terminal 
+choco install nugetpackagemanager 
+choco install office365business 
+choco install onedrive 
+choco install onenote 
+choco install powershell-core 
+choco install powertoys 
+choco install psexec 
+choco install pstools 
+choco install rsat 
+choco install sysinternals 
+choco install vcredist140 
+choco install vscode 
+choco install vscode-powershell 
 
 # Nord
-choco install nordpass -y
-choco install nordvpn -y
+choco install nordpass 
+choco install nordvpn 
 
 # Proton
-choco install protonvpn -y
+choco install protonvpn 
 
 # Utilities - Network
-choco install advanced-ip-scanner -y
+choco install advanced-ip-scanner 
 
 # Miscellaneous
-choco install 7zip -y
-choco install adobereader -y
-choco install crystaldiskinfo -y
-choco install dependencywalker -y
-choco install dropbox -y
-choco install speedtest -y
-choco install treesizefree -y
+choco install 7zip 
+choco install adobereader 
+choco install crystaldiskinfo 
+choco install dependencywalker 
+choco install dropbox 
+choco install speedtest 
+choco install treesizefree 

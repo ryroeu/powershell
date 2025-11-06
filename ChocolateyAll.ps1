@@ -8,187 +8,187 @@ Set-ExecutionPolicy Unrestricted -Scope Process -Force
 choco feature enable -n allowGlobalConfirmation
 
 # Chocolatey Extensions and Updates
-choco install chocolatey-core.extension -y
-choco install chocolateygui -y
-choco install chocolateypackageupdater -y
+choco install chocolatey-core.extension 
+choco install chocolateygui 
+choco install chocolateypackageupdater 
 
 # AMD
-choco install amd-ryzen-chipset -y
+choco install amd-ryzen-chipset 
 
 # AWS
-choco install amazon-workspaces -y
-choco install aws-iam-authenticator -y
-choco install awscli -y
-choco install awstools.powershell -y
+choco install amazon-workspaces 
+choco install aws-iam-authenticator 
+choco install awscli 
+choco install awstools.powershell 
 
 # Azure
-choco install az.powershell -y
-choco install azure-cli -y
-choco install azure-functions-core-tools -y
-choco install microsoftazurestorageexplorer -y
+choco install az.powershell 
+choco install azure-cli 
+choco install azure-functions-core-tools 
+choco install microsoftazurestorageexplorer 
 
 # BitDefender
-choco install bitdefender-usb-immunizer -y
-choco install trafficlight-chrome -y
-choco install trafficlight-firefox -y
+choco install bitdefender-usb-immunizer 
+choco install trafficlight-chrome 
+choco install trafficlight-firefox 
 
 # Browsers
-choco install chromium -y
-choco install firefox -y
-choco install googlechrome -y
-choco install tor-browser -y
-choco install waterfox -y
+choco install chromium 
+choco install firefox 
+choco install googlechrome 
+choco install tor-browser 
+choco install waterfox 
 
 # CPU-Z
-choco install cpu-z -y
-choco install hwmonitor -y
+choco install cpu-z 
+choco install hwmonitor 
 
 # DevOps
-choco install busybox -y
-choco install curl -y
-choco install go -y
-choco install hadoop -y
-choco install jenkins -y
-choco install jenkins-x -y
-choco install kubernetes-cli -y
-choco install nginx -y
-choco install octopustools -y
-choco install octopusdeploy -y
-choco install octopusdeploy.tentacle -y
-choco install python -y
-choco install rabbitmq -y
-choco install ruby -y
-choco install sandboxie -y
-choco install serverless -y
-choco install squid -y
-choco install sublimetext4 -y
-choco install sudo -y
-choco install vim -y
+choco install busybox 
+choco install curl 
+choco install go 
+choco install hadoop 
+choco install jenkins 
+choco install jenkins-x 
+choco install kubernetes-cli 
+choco install nginx 
+choco install octopustools 
+choco install octopusdeploy 
+choco install octopusdeploy.tentacle 
+choco install python 
+choco install rabbitmq 
+choco install ruby 
+choco install sandboxie 
+choco install serverless 
+choco install squid 
+choco install sublimetext4 
+choco install sudo 
+choco install vim 
 
 # Docker
-choco install docker-cli -y
-choco install docker-compose -y
-choco install docker-desktop -y
+choco install docker-cli 
+choco install docker-compose 
+choco install docker-desktop 
 
 # Egnyte
-choco install egnyte-desktop-app -y
+choco install egnyte-desktop-app 
 
 # ESET
-choco install eset-internet-security -y
-choco install eset-nod32-antivirus -y
+choco install eset-internet-security 
+choco install eset-nod32-antivirus 
 
 # Gaming
-choco install discord -y
-choco install ea-app -y
-choco install ubisoft-connect -y
+choco install discord 
+choco install ea-app 
+choco install ubisoft-connect 
 
 # Git
-choco install gh -y
-choco install github-desktop -y
-choco install git -y
-choco install git-credential-manager-for-windows -y
+choco install gh 
+choco install github-desktop 
+choco install git 
+choco install git-credential-manager-for-windows 
 
 # Google
-choco install googledrive -y
-choco install google-voice-desktop -y
-choco install googleearthpro -y
+choco install googledrive 
+choco install google-voice-desktop 
+choco install googleearthpro 
 
 # HashiCorp
-choco install consul -y
-choco install packer -y
-choco install terraform -y
-choco install vagrant -y
-choco install vault -y
+choco install consul 
+choco install packer 
+choco install terraform 
+choco install vagrant 
+choco install vault 
 
 # Intel
-choco install intel-dsa -y
-choco install intel-graphics-driver -y
+choco install intel-dsa 
+choco install intel-graphics-driver 
 
 # Java
-choco install openjdk -y
-choco install jre8 -y
+choco install openjdk 
+choco install jre8 
 
 # Microsoft
-choco install dotnet -y
-choco install dotnetfx -y
-choco install microsoft-teams -y
-choco install microsoft-windows-terminal -y
-choco install nugetpackagemanager -y
-choco install office365business -y
-choco install onedrive -y
-choco install onenote -y
-choco install powerbi -y
-choco install powershell-core -y
-choco install powertoys -y
-choco install psexec -y
-choco install pstools -y
-choco install rsat -y
-choco install sql-server-management-studio -y
-choco install sysinternals -y
-choco install vcredist140 -y
-choco install vscode -y
-choco install vscode-ansible -y
-choco install vscode-go -y
-choco install vscode-java -y
-choco install vscode-powershell -y
-choco install vscode-yaml -y
+choco install dotnet 
+choco install dotnetfx 
+choco install microsoft-teams 
+choco install microsoft-windows-terminal 
+choco install nugetpackagemanager 
+choco install office365business 
+choco install onedrive 
+choco install onenote 
+choco install powerbi 
+choco install powershell-core 
+choco install powertoys 
+choco install psexec 
+choco install pstools 
+choco install rsat 
+choco install sql-server-management-studio 
+choco install sysinternals 
+choco install vcredist140 
+choco install vscode 
+choco install vscode-ansible 
+choco install vscode-go 
+choco install vscode-java 
+choco install vscode-powershell 
+choco install vscodeaml 
 
 # Nord
-choco install nordpass -y
-choco install nordvpn -y
+choco install nordpass 
+choco install nordvpn 
 
 # nVidia
-choco install geforce-experience -y
-choco install geforce-game-ready-driver -y
-choco install nvidia-display-driver -y
-choco install nvidia-geforce-now -y
+choco install geforce-experience 
+choco install geforce-game-ready-driver 
+choco install nvidia-display-driver 
+choco install nvidia-geforce-now 
 
 #PDQ
-choco install pdq-deploy -y
-choco install pdq-inventory -y
+choco install pdq-deploy 
+choco install pdq-inventory 
 
 # Proton
-choco install protonvpn -y
+choco install protonvpn 
 
 # Ubiquiti
-choco install ubiquiti-unifi-controller -y
+choco install ubiquiti-unifi-controller 
 
 # VirtualBox
-choco install virtualbox -y
-choco install virtualbox-guest-additions-guest.install -y
+choco install virtualbox 
+choco install virtualbox-guest-additions-guest.install 
 
 # vmWare
-choco install vmware-powercli-psmodule -y
-choco install vmware-tools -y
-choco install vmwareworkstation -y
+choco install vmware-powercli-psmodule 
+choco install vmware-tools 
+choco install vmwareworkstation 
 
 # Zoom
-choco install zoom -y
+choco install zoom 
 
 # Utilities - FTP
-choco install filezilla -y
-choco install filezilla.server -y
-choco install winscp -y
+choco install filezilla 
+choco install filezilla.server 
+choco install winscp 
 
 # Utilities - Network
-choco install advanced-ip-scanner -y
-choco install nmap -y
-choco install wireshark -y
+choco install advanced-ip-scanner 
+choco install nmap 
+choco install wireshark 
 
 # Utilities - Remote
-choco install openvpn -y
-choco install putty -y
-choco install royalts-v7-x64 -y
-#choco install royalts-v7-arm64 -y
-choco install teamviewer -y
-choco install teamviewer-qs -y
+choco install openvpn 
+choco install putty 
+choco install royalts-v7-x64 
+#choco install royalts-v7-arm64 
+choco install teamviewer 
+choco install teamviewer-qs 
 
 # Miscellaneous
-choco install 7zip -y
-choco install adobereader -y
-choco install crystaldiskinfo -y
-choco install dependencywalker -y
-choco install dropbox -y
-choco install slack -y
-choco install speedtest -y
-choco install treesizefree -y
+choco install 7zip 
+choco install adobereader 
+choco install crystaldiskinfo 
+choco install dependencywalker 
+choco install dropbox 
+choco install slack 
+choco install speedtest 
+choco install treesizefree 
