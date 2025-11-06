@@ -75,7 +75,6 @@ choco install advanced-ip-scanner -y
 # Miscellaneous
 choco install 7zip -y
 choco install adobereader -y
-choco install ccleaner -y
 choco install crystaldiskinfo -y
 choco install dependencywalker -y
 choco install dropbox -y
