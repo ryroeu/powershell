@@ -1,3 +1,1 @@
-$OSWMI=Get-WmiObject -class Win32_OperatingSystem
-$OSWMI.Description="ComputerName"
-$OSWMI.put()
+Set-CimInstance -Query "SELECT * FROM Win32_OperatingSystem" -Property @{ Description = "ComputerName" }

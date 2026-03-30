@@ -11,8 +11,8 @@
 
 Function SetupForm {
 	#Setup the form
-	[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-	[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing") 
+	Add-Type -AssemblyName System.Windows.Forms
+	Add-Type -AssemblyName System.Drawing
 
 	$objForm = New-Object System.Windows.Forms.Form 
 	$objForm.Text = "Select user(s)"
@@ -54,7 +54,7 @@ Function SetupForm {
 ForEach ($computer in $Computers) {
 	#use WMI to find all users with a profile on the servers
 		Try{
-			[array]$users = Get-WmiObject -ComputerName $computer Win32_UserProfile -filter "LocalPath Like 'C:\\Users\\%'" -ea stop  
+			[array]$users = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -Filter "LocalPath Like 'C:\\Users\\%'" -ErrorAction Stop
 			}	
 		Catch {  
  			Write-Warning "$($error[0]) "  
@@ -90,7 +90,8 @@ Function DeleteProfile {
 	 
 		ForEach ($computer in $Computers) {
 			Try {
-				(Get-WmiObject -ComputerName $computer Win32_UserProfile | Where {$_.LocalPath -eq $selecteduser}).Delete()
+				$userProfile = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile | Where-Object { $_.LocalPath -eq $selecteduser }
+				Remove-CimInstance -InputObject $userProfile
 				Write-Host -ForegroundColor Green "$selecteduser has been deleted from $computer"
 				Add-Content $log "$date $selecteduser profile has been deleted from $computer"
 			}

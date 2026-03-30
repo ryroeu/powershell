@@ -1,4 +1,3 @@
-Import-Module MSOnline
-$Username = "admin@domain.com"
-$Credential = Get-Credential $Username
-Connect-AzureAD -Credential $Credential
+Import-Module Microsoft.Graph.Authentication
+$TenantID = "YourTenantID"
+Connect-MgGraph -TenantId $TenantID -Scopes "User.ReadWrite.All", "Directory.ReadWrite.All"

@@ -12,10 +12,10 @@ $emailFrom = "DBServer@domain.com"
 $emailTo = "email2@domain.com"
 
 # Get SQL Server hostname
-$hostname = Get-WMIObject Win32_ComputerSystem | Select-Object -ExpandProperty Name
+$hostname = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Name
 
 # Get all drives with free space less than a threshold. Exclude System Volumes
-$Results = Get-WmiObject -Class Win32_Volume -Filter "SystemVolume='False' AND DriveType=3" | Where-Object {`
+$Results = Get-CimInstance -ClassName Win32_Volume -Filter "SystemVolume='False' AND DriveType=3" | Where-Object {`
 	($_.FreeSpace/1GB -lt  $driveCthreshold -and $_.DriveLetter -eq "C:") -or ($_.FreeSpace/1GB -lt  $threshold -and $_.DriveLetter -ne "C:" )
 }
 

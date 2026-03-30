@@ -3,13 +3,13 @@ function Get-PCinfo {
     systeminfo | findstr /B /C:"OS Name" /B /C:"OS Version" | Format-Table -AutoSize
 
     Write-Host "Getting LoggedOn User.." -ForegroundColor Magenta
-    Get-WMIObject Win32_LoggedOnUser | Select-Object __Server, Antecedent, Dependent | Format-Table -AutoSize
+    Get-CimInstance Win32_LoggedOnUser | Select-Object PSComputerName, Antecedent, Dependent | Format-Table -AutoSize
 
     Write-Host "Getting BIOS Version.." -ForegroundColor Magenta
-    Get-WMIObject Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate, SerialNumber | Format-Table -AutoSize
+    Get-CimInstance Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate, SerialNumber | Format-Table -AutoSize
 
     Write-Host "Getting CPU Info.." -ForegroundColor Magenta
-    Get-WMIObject Win32_Processor | Select-Object Name, MaxClockSpeed, NumberOfCores | Format-Table -AutoSize
+    Get-CimInstance Win32_Processor | Select-Object Name, MaxClockSpeed, NumberOfCores | Format-Table -AutoSize
 
     Write-Host "Getting 10 highest processes on CPU Usage.." -ForegroundColor Magenta
     Get-Process | Where-Object Path -notlike ($env:WINDIR + "*") | Sort-Object CPU | Select-Object Name, CPU, StartTime | Select-Object -Last 10 | Sort-Object CPU -Descending | Format-Table -AutoSize
