@@ -1,5 +1,10 @@
 #Requires -RunAsAdministrator
 
+<#
+.SYNOPSIS
+    Deletes user profile.
+#>
+
 [CmdletBinding()]
 param(
     [string]$ComputersPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Computers.txt'),

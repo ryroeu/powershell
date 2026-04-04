@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages remote framework.
+#>
+
 #requires -version 5.1
 
 <#

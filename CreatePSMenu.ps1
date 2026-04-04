@@ -1,4 +1,9 @@
-﻿using namespace System.Management.Automation.Host
+<#
+.SYNOPSIS
+    Creates PowerShell menu.
+#>
+
+using namespace System.Management.Automation.Host
 
 <# FUNCTIONS #>
 function New-Menu {

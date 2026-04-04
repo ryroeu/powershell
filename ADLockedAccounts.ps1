@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory locked accounts.
+#>
+
 $properties = @(
     'TimeCreated',
     @{n='Account Name';e={$_.Properties[0].Value}},

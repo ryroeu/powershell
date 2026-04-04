@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Removes Active Directory users.
+#>
+
 $TargetOU = "OU=NameOfOU,DC=domain,DC=com"
 
 ##########################################################################

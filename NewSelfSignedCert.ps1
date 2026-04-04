@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Creates self signed cert.
+#>
+
 Import-Module -Name PKI
 $define = @{
     FriendlyName = 'PowerShell Automation'

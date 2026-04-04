@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages cert get expired windows.
+#>
+
 # Get the current date once for comparison
 $CurrentDate = Get-Date
 

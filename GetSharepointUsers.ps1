@@ -1,4 +1,9 @@
-﻿Add-PSSnapin Microsoft.SharePoint.PowerShell -EA SilentlyContinue
+<#
+.SYNOPSIS
+    Retrieves SharePoint users.
+#>
+
+Add-PSSnapin Microsoft.SharePoint.PowerShell -EA SilentlyContinue
 
 #Parameter
 $URL="https://sharepoint.company.com/sites/csaportal"

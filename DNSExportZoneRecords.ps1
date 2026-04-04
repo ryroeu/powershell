@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Exports DNS zone records.
+#>
+
 [CmdletBinding()]
 param(
     [string]$OutputPath = (Join-Path -Path $PWD -ChildPath 'DNSRecords.csv'),

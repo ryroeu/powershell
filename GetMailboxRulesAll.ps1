@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves mailbox rules all.
+#>
+
 $TenantID = 'YourTenantID'
 $AppID = 'YourApplicationID'
 $CertThumbprint = 'YourCertThumbprint'  # App must have Exchange.ManageAsApp permission

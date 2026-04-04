@@ -1,4 +1,9 @@
-﻿
+
+<#
+.SYNOPSIS
+    Manages active directory user group information.
+#>
+
 # Build an array of the objects you want to check here. Can be local paths, UNCs etc. Input method can be directly in the script as below, or imported from an external source.
 $Paths = "\\computername.domain.com\directory"
 # Create and initialize a new array for the output

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Sets computer name and IP.
+#>
+
 Import-Module NetTCPIP
 Import-Module DnsClient
 

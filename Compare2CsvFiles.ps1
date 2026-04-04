@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Compares 2 csv files.
+#>
+
 # --- Configuration ---
 $PrimaryFilePath = Join-Path -Path $PSScriptRoot -ChildPath "File1.csv" # Assumes CSVs are in the same folder as the script
 $LookupFilePath  = Join-Path -Path $PSScriptRoot -ChildPath "File2.csv"

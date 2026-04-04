@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves stability score.
+#>
+
 [CmdletBinding()]
 param (
     # Number of System Stability Indexes to return (generated hourly)

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Removes application 4 non admins.
+#>
+
 # Get local users
 $Users = Get-LocalUser | Select-Object Name
 # Get members of administrators group

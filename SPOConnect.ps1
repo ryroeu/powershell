@@ -1,5 +1,10 @@
 #Requires -Modules Microsoft.Online.SharePoint.PowerShell
 
+<#
+.SYNOPSIS
+    Connects to SharePoint Online.
+#>
+
 [CmdletBinding(DefaultParameterSetName = 'Browser')]
 param(
     [Parameter(Mandatory)]

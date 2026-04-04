@@ -1,5 +1,10 @@
 #Requires -RunAsAdministrator
 
+<#
+.SYNOPSIS
+    Manages powershell config client.
+#>
+
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string[]]$TrustedHosts,

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Sets ARP retry count.
+#>
+
 ﻿function Set-ARPRetryCount {
     $Servers = Import-Csv -Path C:\PowerShell\ServerList.csv
     foreach ($Server in $Servers) {

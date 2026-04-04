@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves self signed cert.
+#>
+
 $define = @{
     FilePath = 'C:\Git\PSautomateCert.pfx'
     Password = (ConvertTo-SecureString -AsPlainText -String 'password' -Force)

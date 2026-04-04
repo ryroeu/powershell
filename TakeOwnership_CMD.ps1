@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Takes ownership cmd.
+#>
+
 ﻿function Set-AdminOwnershipAndPermission {
     [CmdletBinding(SupportsShouldProcess=$true)] # Adds -WhatIf and -Confirm support
     param(

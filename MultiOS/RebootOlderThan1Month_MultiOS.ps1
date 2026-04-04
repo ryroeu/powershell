@@ -1,4 +1,9 @@
 #Requires -RunAsAdministrator # On Windows, administrator privileges are needed for Restart-Computer/shutdown
+<#
+.SYNOPSIS
+    Reboots older than 1 month across multiple operating systems.
+#>
+
 # On Linux/macOS, this script needs to be run with sudo for the shutdown command.
 
 <#

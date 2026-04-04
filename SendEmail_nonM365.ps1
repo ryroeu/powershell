@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Sends email non Microsoft 365.
+#>
+
 # --- Configuration ---
 $From = "user@domain.com"
 $To = "recipient@domain.com"

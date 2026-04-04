@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages kms multiple operating systems activation.
+#>
+
 #### Installs the appropriate KMS client key for the detected OS ####
 $OSversion = (Get-CimInstance -ClassName Win32_OperatingSystem).Caption
 switch -Regex ($OSversion) {

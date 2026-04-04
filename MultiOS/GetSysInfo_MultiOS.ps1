@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves system information across multiple operating systems.
+#>
+
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS

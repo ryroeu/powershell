@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Stops service.
+#>
+
 $ServiceName = 'Name of Service'
 $arrService = Get-Service -Name $ServiceName
 

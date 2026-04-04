@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Cleans up ADMT.
+#>
+
 Import-Module Microsoft.PowerShell.Management
 
 Write-Host "Stopping ADMT Agent.." -ForegroundColor Magenta

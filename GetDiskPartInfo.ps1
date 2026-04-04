@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves disk part information.
+#>
+
 Function Get-DiskInfoAdvanced {
     [CmdletBinding()]
     Param()

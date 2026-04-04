@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Creates DHCP.
+#>
+
 ### Set IP / DNS on Server ###
 New-NetIPAddress -IPAddress 10.0.0.3 `
                  -InterfaceAlias "Ethernet" `

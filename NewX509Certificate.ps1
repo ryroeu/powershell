@@ -1,4 +1,9 @@
-﻿using namespace System.Security.Cryptography.X509Certificates
+<#
+.SYNOPSIS
+    Creates x 509 certificate.
+#>
+
+using namespace System.Security.Cryptography.X509Certificates
 
 function New-X509Certificate {
     Param (

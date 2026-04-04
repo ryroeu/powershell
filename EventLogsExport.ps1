@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+Exports a selected Windows event log from each server in a list and moves the `.evtx` files to a central share.
+#>
+
 <# VARIABLES #>
 # Specify which Log File
 $EventLogName = "Application"

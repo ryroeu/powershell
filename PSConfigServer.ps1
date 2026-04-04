@@ -1,5 +1,10 @@
 #Requires -RunAsAdministrator
 
+<#
+.SYNOPSIS
+    Manages powershell config server.
+#>
+
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [switch]$EnableCredSSP,

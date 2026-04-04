@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Installs patch.
+#>
+
 function Invoke-DismCommand {
     [CmdletBinding()]
     param(

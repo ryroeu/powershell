@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Installs PowerShell modules.
+#>
+
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [switch]$TrustPSGallery,

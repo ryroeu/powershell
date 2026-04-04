@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory users expiring.
+#>
+
 ### Export Users with Expiring Status to CSV ###
 Search-ADAccount -UsersOnly `
                  -AccountExpiring | Select-Object -Property SAMaccountname, `

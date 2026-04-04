@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages folder redirect fix.
+#>
+
 ### {USER-STRING} ###
 REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "{USER-STRING}"
 REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "{USER-STRING}" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Libraries"

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Stops all nondefault Windows service.
+#>
+
 #requires -Version 5.1 
 # Although compatible with Core 7+, setting a baseline. 
 # Requires running as Administrator to stop services.

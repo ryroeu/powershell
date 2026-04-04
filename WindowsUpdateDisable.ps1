@@ -1,5 +1,10 @@
 #Requires -RunAsAdministrator
 
+<#
+.SYNOPSIS
+    Disables Windows update.
+#>
+
 Write-Host "Attempting to disable Windows Update services..." -ForegroundColor Yellow
 
 # List of services to disable

@@ -1,4 +1,7 @@
 ﻿<#
+.SYNOPSIS
+Searches Active Directory domains for duplicate address values across core, Exchange, and SIP attributes.
+
 .EXAMPLE
 .\Find-DuplicateValues.ps1 -Credential (Get-Credential) -Address john@contoso.com -IncludeExchange
 Prompt for credentials and search all domains in forest for default and Exchange attributes that contain john@contoso.com.

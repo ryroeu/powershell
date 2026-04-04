@@ -1,4 +1,9 @@
-﻿Describe "Invoke-RestMethod Responses" {
+<#
+.SYNOPSIS
+    Tests pester.
+#>
+
+Describe "Invoke-RestMethod Responses" {
     Context "Internet Connectivity" {
         It "Google is Resolvable" {
             $online = Invoke-WebRequest -Uri "https://google.com/"

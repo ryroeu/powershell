@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages geolocation.
+#>
+
 # Enter your Google GeoLocation API Key
 $apikey = "YOUR-API-KEY-HERE"
 

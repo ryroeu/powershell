@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory expired passwords.
+#>
+
 ### Display Users who have been inactive 90 Days ###
 $InactiveDays = 90
 $MaxPasswordAge = (Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.Days

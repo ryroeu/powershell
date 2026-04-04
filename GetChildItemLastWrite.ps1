@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves child item last write.
+#>
+
 Param(
     [Parameter(Mandatory=$true)]
     [Datetime]$LastWrite

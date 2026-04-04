@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves logged on user.
+#>
+
 # Get LoggedOn User
 # Define the server name
 $Server = "YourRemoteServerName" # Replace with the actual server name or IP

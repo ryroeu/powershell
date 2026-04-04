@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Terminates remote the related task.
+#>
+
 #requires -version 5.1
 
 Function Stop-RemoteProcess {

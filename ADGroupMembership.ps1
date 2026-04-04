@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory group membership.
+#>
+
 ### Export Domain Admins Group to CSV ###
 Get-ADGroupMember -Server domain.com `
                   -Identity "Domain Admins" `

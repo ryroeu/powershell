@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves FSMO roles.
+#>
+
 ### Get FSMO Roles ###
 Get-ADForest domain.com | Format-Table SchemaMaster
 Get-ADForest domain.com | Format-Table DomainNamingMaster

@@ -1,4 +1,9 @@
-﻿Add-PSSnapin Microsoft.SharePoint.PowerShell -EA SilentlyContinue
+<#
+.SYNOPSIS
+    Retrieves SharePoint group members.
+#>
+
+Add-PSSnapin Microsoft.SharePoint.PowerShell -EA SilentlyContinue
 
 $URL="https://sharepoint.company.com/sites/helpdesk/us"
 $Site = Get-SPSite $URL

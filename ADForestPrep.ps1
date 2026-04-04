@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory forest prep.
+#>
+
 # Prepare the Forest
 adprep.exe /forestprep /forest lucernpub.com /user EntAdmin /userdomain lucernpub.com /password P@ssw0rd
 # Prepare the Domain

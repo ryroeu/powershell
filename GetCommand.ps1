@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves command.
+#>
+
 # Get commands for AWS PowerShell
 Get-Command -Module AWSPowerShell | Select-Object Name, Module, Version, Visibility, Definition | Export-CSV 'C:\Temp\AWSPowerShell.csv' -NoTypeInformation -Force
 # Get commands for Azure

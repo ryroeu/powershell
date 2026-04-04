@@ -1,4 +1,9 @@
-﻿# Get who I am
+<#
+.SYNOPSIS
+    Queries local admin.
+#>
+
+# Get who I am
 $Me = whoami.exe
 # Get members of administrators group
 $Admins = Get-LocalGroupMember -Name Administrators | Select-Object Name

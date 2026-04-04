@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Tests Active Directory credentials.
+#>
+
 $UserName = 'UserName'
 $Password = Read-Host "Enter your password: " -AsSecureString
 Function Test-ADAuthentication {

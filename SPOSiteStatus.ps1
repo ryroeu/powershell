@@ -1,5 +1,10 @@
 #Requires -Modules Microsoft.Online.SharePoint.PowerShell
 
+<#
+.SYNOPSIS
+    Manages sharepoint online site status.
+#>
+
 [CmdletBinding(DefaultParameterSetName = 'Browser')]
 param(
     [Parameter(Mandatory)]

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves installed programs.
+#>
+
 # Get Installed Software
 # Define the registry paths
 $paths = @(

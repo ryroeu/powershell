@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Resets WMI.
+#>
+
 function DisableService([System.ServiceProcess.ServiceController]$svc) { 
     Set-Service -Name $svc.Name -StartupType Disabled 
 }

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages admt port check.
+#>
+
 function Get-PortQry {
     # Download PortQry utility
     Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=17148 -OutFile ./PortQryV2.exe

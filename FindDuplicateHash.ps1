@@ -1,5 +1,6 @@
 <#
-This script calculates the hash of a file and compares it to the hash of all files in a directory.
+.SYNOPSIS
+Calculates a file hash and searches a directory for other files with the same hash value.
 #>
 
 #### GET THE HASH OF A FILE YOU WANT TO COMPARE

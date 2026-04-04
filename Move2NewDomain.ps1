@@ -1,4 +1,7 @@
 <#
+.SYNOPSIS
+Moves a computer from a source domain to a target domain and restarts it after the domain join.
+
 The variables $computerSAM and $fqdn come from the main part of the script as parameters when calling the function.
 $computerSAM=”samaccountname of computer to migrate”
 $fqdn=”full qualified domain name of computer to migrate”

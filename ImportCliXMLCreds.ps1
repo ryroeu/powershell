@@ -1,6 +1,6 @@
 <#
-A valuable use of Import-Clixml on Windows computers is to import credentials and secure strings that were 
-exported as secure XML using Export-Clixml. 
+.SYNOPSIS
+Shows how to export and import credentials by using `Export-Clixml` and `Import-Clixml`.
 #>
 Get-Credential -Credential $env:USERNAME
 # Export

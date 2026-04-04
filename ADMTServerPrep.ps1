@@ -1,5 +1,11 @@
-﻿<# NOT INTENDED TO BE RAN AS A SCRIPT. THIS IS A COLLECTION OF SNIPPETS FOR AN AD MIGRATION.
-THIS IS A WORK IN PROGRESS. WAS WRITTEN IN A FEW MINUTES FROM MEMORY. #>
+﻿<#
+.SYNOPSIS
+Provides reference snippets for preparing an ADMT migration server and related Active Directory infrastructure.
+
+.DESCRIPTION
+This file is a working collection of one-off commands used during Active Directory migration planning.
+It is intended as a checklist or reference, not as a single script to run end to end.
+#>
 
 
 #################### Set DNS IP Addresses on each DC ####################

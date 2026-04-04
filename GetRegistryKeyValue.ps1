@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves registry key value.
+#>
+
 # Check Registry Key
 $RegistryKey = Get-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate -Name "WUServer" -ErrorAction Ignore
 if ($RegistryKey -EQ "https://SERVERNAME.DOMAIN.COM:8531") {

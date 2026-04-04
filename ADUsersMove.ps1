@@ -1,4 +1,9 @@
-﻿$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
+<#
+.SYNOPSIS
+    Moves Active Directory users.
+#>
+
+$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
 $InactiveOU = "OU=Inactive Users,OU=NameOfOU,DC=domain,DC=com"
 $ExpiredOU = "OU=Expired Users,OU=NameOfOU,DC=domain,DC=com"
 $DisabledOU = "OU=Disabled Users,OU=NameOfOU,DC=domain,DC=com"

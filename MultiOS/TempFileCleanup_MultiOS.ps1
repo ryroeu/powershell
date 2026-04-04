@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Cleans up temporary file across multiple operating systems.
+#>
+
 # Cross-platform Temp Cleanup Script
 # Requires PowerShell 6+ (Core)
 

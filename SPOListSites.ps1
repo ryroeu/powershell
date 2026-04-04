@@ -1,5 +1,10 @@
 #Requires -Modules PnP.PowerShell
 
+<#
+.SYNOPSIS
+    Manages sharepoint online list sites.
+#>
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]

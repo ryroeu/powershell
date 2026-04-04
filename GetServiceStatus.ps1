@@ -1,4 +1,9 @@
-﻿$svc = Get-Service W32Time
+<#
+.SYNOPSIS
+    Retrieves service status.
+#>
+
+$svc = Get-Service W32Time
 $svcName = $svc.Name
 switch -wildcard ($svc.Status) {
     "S*" {Write-Host "The $svcName service is stopped."}

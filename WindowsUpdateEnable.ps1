@@ -1,5 +1,10 @@
 #Requires -RunAsAdministrator
 
+<#
+.SYNOPSIS
+    Enables Windows update.
+#>
+
 Write-Host "Attempting to re-enable Windows Update services..." -ForegroundColor Yellow
 
 # Service names and their typical default StartupTypes

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Copies Active Directory user membership.
+#>
+
 # CHANGE VARIABLES TO YOUR NEEDS #
 $Server = "domain.com" #Domain that Users are in
 $SourceUser = Get-ADUser -Identity "SamAccountName" -Server $Server #User (SAMAccountName) you are copying 'MemberOf' Groups from

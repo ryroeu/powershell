@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory inactive accounts.
+#>
+
 ### SEARCH 90 DAY INACTIVE ACCOUNTS BY USERS ONLY ###
 Search-ADAccount -UsersOnly `
                  -AccountInactive `

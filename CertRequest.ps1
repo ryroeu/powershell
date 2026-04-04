@@ -1,4 +1,7 @@
 ﻿<#
+.SYNOPSIS
+Requests and installs a web server certificate from an enrollment service by using the SslWebServer template.
+
 This example submits a certificate request for the SslWebServer template to the specific URL using the user name and password credentials.
 The request will have two DNS names in it.
 This is for a certificate in the machine store.

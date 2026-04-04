@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Creates certificate on remote pc.
+#>
+
 function New-RemoteRDPCertificate {
     <#
         .SYNOPSIS

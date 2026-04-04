@@ -1,4 +1,9 @@
-﻿# RepAdmin Commands for Troubleshooting
+<#
+.SYNOPSIS
+    Manages active directory rep admin cmd.
+#>
+
+# RepAdmin Commands for Troubleshooting
 
 ## Forces the KCC on the targeted domain controller to immediately recalculate its inbound replication topology
 repadmin.exe /kcc

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves SQL Server version.
+#>
+
 $inst = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
 ForEach ($i in $inst) {
    $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i

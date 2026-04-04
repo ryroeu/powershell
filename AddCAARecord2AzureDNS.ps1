@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Adds caar ecord 2 azure DNS.
+#>
+
 $zonename = "example1.com"
 $resourcegroup = "resourcegroup"
 $certificateauthority = "digicert.com" # Possible values are: `letsencrypt.org`, `digicert.com`

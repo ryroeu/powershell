@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Sets disk space alarm.
+#>
+
 ﻿# Replace "smtp.domain.com" with your mail server name
 Add-Type -AssemblyName System.Net.Mail
 

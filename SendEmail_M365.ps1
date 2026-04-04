@@ -1,5 +1,10 @@
 #Requires -Modules Microsoft.Graph.Mail
 
+<#
+.SYNOPSIS
+    Sends email Microsoft 365.
+#>
+
 # --- Configuration (Replace with your actual values) ---
 $TenantId = "YOUR_TENANT_ID"
 $AppId = "YOUR_APP_REGISTRATION_CLIENT_ID"

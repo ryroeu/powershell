@@ -1,5 +1,10 @@
 #Requires -Modules SqlServer
 
+<#
+.SYNOPSIS
+    Retrieves database last backup.
+#>
+
 Function Show-LastServerBackup {
   <#
   .SYNOPSIS

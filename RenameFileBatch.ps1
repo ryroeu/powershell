@@ -1,5 +1,6 @@
 <#
-This script renames all files in a directory with an incrementing number appended to the original filename.
+.SYNOPSIS
+Renames all files in a directory by applying a sequentially numbered filename pattern.
 #>
 
 # Define the directory

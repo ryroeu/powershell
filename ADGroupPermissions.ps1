@@ -1,4 +1,9 @@
-﻿# VIEW ACCESS RIGHTS ON GROUP OBJECT
+<#
+.SYNOPSIS
+    Manages active directory group permissions.
+#>
+
+# VIEW ACCESS RIGHTS ON GROUP OBJECT
 $GroupName = Get-Content .\GroupNames.txt
 (Get-ACL (Get-ADGroup $GroupName)).Access | Select-Object IdentityReference, `
                                                           ActiveDirectoryRights, `

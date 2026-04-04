@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Unlocks Active Directory users.
+#>
+
 ### Export User Accounts to CSV for Reference ###
 <#
 .SYNOPSIS

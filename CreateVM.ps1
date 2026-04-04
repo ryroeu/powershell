@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Creates virtual machine.
+#>
+
 ### Create New VM ###
 New-VM -MemoryStartupBytes "4GB" `
        -Name "NameofVM" `

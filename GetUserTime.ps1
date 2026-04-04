@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves user time.
+#>
+
 function Get-UserTime {
     # This function retrieves the current time and returns a greeting based on the time of day.
     $time = Get-Date -Hour (Get-Date).Hour -Minute (Get-Date).Minute -Second (Get-Date).Second

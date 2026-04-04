@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages group policy folder redirect fix.
+#>
+
 ### FOLDER REDIRECTION GPO FIX ###
 reg export "HKLM:\Software\Policies\Microsoft" C:\HKLM_MicrosoftBkUp.reg
 Remove-Item -Path “HKLM:\Software\Policies\Microsoft” -Recurse -Force

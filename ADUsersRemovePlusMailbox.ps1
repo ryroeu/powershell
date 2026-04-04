@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory users remove plus mailbox.
+#>
+
 # The section below will be an input from Service Manager once the record has been approved for deletion
 $AccountToBeDeleted = Read-Host -prompt "Account to be deleted...."
 $deluser = Get-ADuser $AccountToBeDeleted 

@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Retrieves computer information.
+#>
+
 function Get-PCinfo {
     Write-Host "Getting OS Info.." -ForegroundColor Magenta
     systeminfo | findstr /B /C:"OS Name" /B /C:"OS Version" | Format-Table -AutoSize

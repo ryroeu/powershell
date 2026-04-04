@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Manages active directory users password expired.
+#>
+
 ### Export Users with Expired Passwords to CSV ###
 Search-AdAccount -UsersOnly `
                  -PasswordExpired | Select-Object -Property SAMaccountname, `

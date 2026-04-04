@@ -1,3 +1,8 @@
+<#
+.SYNOPSIS
+    Promotes Active Directory domain controller from installation media.
+#>
+
 # Install Server Role
 Install-WindowsFeature AD-Domain-Services -IncludeManagementTools
 # Install PowerShell Module

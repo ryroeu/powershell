@@ -1,5 +1,10 @@
 #Requires -Version 3.0
 
+<#
+.SYNOPSIS
+    Manages network utility.
+#>
+
 # === How to Use ===
 # 1. Save the script (e.g., as NetUtils.ps1)
 # 2. Open PowerShell

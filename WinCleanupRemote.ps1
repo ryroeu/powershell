@@ -1,5 +1,10 @@
 #Requires -Modules ActiveDirectory
 
+<#
+.SYNOPSIS
+    Cleans up remote Windows systems.
+#>
+
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
 param(
     [Parameter()]
