@@ -22,7 +22,7 @@ function Find-DuplicateValues {
         [Parameter(Mandatory=$false,HelpMessage='Autodetect schema classes')]
             [switch]$AutoDetect,
         [Parameter(Mandatory=$false,HelpMessage='Credential')]
-            [object]$Credential,
+            [System.Management.Automation.PSCredential]$Credential,
         [Parameter(Mandatory=$false,HelpMessage='Include Exchange Attributes')]
             [switch]$IncludeExchange,
         [Parameter(Mandatory=$false,HelpMessage='Include RTC attributes (Live Communications Server, Office Communications Server, Lync, Skype')]

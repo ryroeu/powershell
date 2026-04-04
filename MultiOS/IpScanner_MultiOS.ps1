@@ -22,7 +22,7 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
     exit
 }
 
-function Scan-Network {
+function Find-Network {
     # Determine the local network adapter's IPv4 address.
     # Get-NetIPAddress is a Windows-specific cmdlet. Using if ($IsWindows) is necessary here.
     # On macOS and Linux, we use 'ip route' and standard string manipulation to get the IP.
@@ -100,4 +100,4 @@ function Scan-Network {
 }
 
 # Run the function
-Scan-Network
+Find-Network
