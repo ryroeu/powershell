@@ -317,7 +317,7 @@ function Get-ActiveHost {
         return "Skipped"
     }
 
-    $targets = Get-HostScanTargets -NetworkAddress $networkAddress -Prefix $cidrPrefix -LocalIPAddress $localIP
+    $targets = Get-HostScanTarget -NetworkAddress $networkAddress -Prefix $cidrPrefix -LocalIPAddress $localIP
     if ($null -eq $targets) {
         return "Skipped"
     }
