@@ -32,7 +32,6 @@
         [switch] $PassThru
     )
     BEGIN {
-        $NewCert = New-Object MG.RDP.Certificates.NewCertificate;
         if ($PSBoundParameters["ComputerName"]) {
             $PSSession = New-PSSession -ComputerName $ComputerName
         }
@@ -41,9 +40,9 @@
         $sessionArgs = @($ValidUntil, $HashAlgorithm.ToString(), $KeyLength)
         $result = Invoke-Command -Session $PSSession -HideComputerName -ArgumentList $sessionArgs -ScriptBlock {
             param (
-                [datetime] $using:validUntil = $args[0],
-                [string] $using:algorithm = $args[1],
-                [int] $using:KeyLength = $args[2]
+                [datetime] $using:using:validUntil = $args[0],
+                [string] $using:using:algorithm = $args[1],
+                [int] $using:using:KeyLength = $args[2]
             )
             Add-Type -AssemblyName System.Security;
             $extsToAdd = New-Object 'System.Collections.Generic.List[object]';
