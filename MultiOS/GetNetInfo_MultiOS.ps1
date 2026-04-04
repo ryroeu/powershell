@@ -8,6 +8,14 @@
     Tested on Windows, macOS, and Linux with PowerShell Core.
 #>
 
+param(
+    [int]$PublicIPTimeoutSeconds = 5,
+    [int]$PingTimeoutMilliseconds = 400,
+    [int]$ThrottleLimit = 64,
+    [int]$MaxHostsToScan = 512,
+    [switch]$SkipHostScan
+)
+
 # OS Detection
 if ($IsWindows) {
     $platform = "Windows"
@@ -40,6 +48,41 @@ function Convert-HexNetmaskToPrefix {
     $binary = [Convert]::ToString($intValue,2).PadLeft(32,'0')
     $ones = ($binary.ToCharArray() | Where-Object { $_ -eq '1' }).Count
     return $ones
+}
+
+# Function: Convert IPv4 string to UInt32 for bitwise operations
+function Convert-IPv4ToUInt32 {
+    param(
+        [Parameter(Mandatory)]
+        [string]$IPAddress
+    )
+
+    $parsedAddress = [System.Net.IPAddress]::Parse($IPAddress)
+    if ($parsedAddress.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) {
+        throw "Invalid IPv4 address: $IPAddress"
+    }
+
+    $bytes = $parsedAddress.GetAddressBytes()
+    if ([BitConverter]::IsLittleEndian) {
+        [Array]::Reverse($bytes)
+    }
+
+    return [BitConverter]::ToUInt32($bytes, 0)
+}
+
+# Function: Convert UInt32 back to IPv4 dotted-decimal notation
+function Convert-UInt32ToIPv4 {
+    param(
+        [Parameter(Mandatory)]
+        [uint32]$Address
+    )
+
+    $bytes = [BitConverter]::GetBytes($Address)
+    if ([BitConverter]::IsLittleEndian) {
+        [Array]::Reverse($bytes)
+    }
+
+    return ([System.Net.IPAddress]::new($bytes)).ToString()
 }
 
 # Function: Get local IP and Subnet mask/prefix
@@ -114,8 +157,8 @@ function Get-LocalIPInfo {
         }
     } elseif ($platform -eq "Linux") {
         Write-Verbose "Attempting to retrieve IP using 'ip' command on Linux..."
-        $ipLine = (ip -4 addr show | Select-String -Pattern "inet " | Where-Object { $_ -notmatch "127.0.0.1"} | Select-Object -First 1).ToString()
-        if ($ipLine -match 'inet\s+([\d\.]+)/(\d+)') {
+        $ipMatch = ip -4 addr show | Select-String -Pattern "inet " | Where-Object { $_ -notmatch "127.0.0.1"} | Select-Object -First 1
+        if ($null -ne $ipMatch -and $ipMatch.ToString() -match 'inet\s+([\d\.]+)/(\d+)') {
             Write-Verbose "IP retrieved via ip command: $($Matches[1])"
             return [PSCustomObject]@{
                 IP     = $Matches[1]
@@ -140,18 +183,10 @@ $cidrPrefix = $ipInfoObj.Subnet
 
 # Function: Compute network address from IP and CIDR prefix
 function Get-NetworkAddress($ip, $prefix) {
-    $ipBytes = $ip -split '\.' | ForEach-Object { [byte]$_ }
-    $mask = [uint32]0
-    for ($i = 0; $i -lt 32; $i++) {
-        if ($i -lt $prefix) { $mask = $mask -bor (1 -shl (31 - $i)) }
-    }
-    $ipInt = 0
-    for ($i = 0; $i -lt 4; $i++) {
-        $ipInt = $ipInt -bor ($ipBytes[$i] -shl (24 - (8 * $i)))
-    }
+    $ipInt = Convert-IPv4ToUInt32 -IPAddress $ip
+    $mask = if ($prefix -eq 0) { [uint32]0 } else { [uint32]([uint32]::MaxValue -shl (32 - $prefix)) }
     $networkInt = $ipInt -band $mask
-    $networkBytes = for ($i = 0; $i -lt 4; $i++) { ($networkInt -shr (24 - (8 * $i))) -band 0xFF }
-    return ($networkBytes -join '.')
+    return (Convert-UInt32ToIPv4 -Address $networkInt)
 }
 
 $networkAddress = Get-NetworkAddress $localIP $cidrPrefix
@@ -195,29 +230,132 @@ $routerLocalIP = Get-DefaultGateway
 
 # Get public IP address (external IP of router)
 try {
-    $routerPublicIP = Invoke-RestMethod -Uri "https://api.ipify.org"
+    $routerPublicIP = Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec $PublicIPTimeoutSeconds
 } catch {
     $routerPublicIP = "Unavailable"
 }
 
-# Function: Discover active hosts on the network
-function Get-ActiveHosts {
-    # This example is optimized for /24 networks.
-    $networkOctets = $networkAddress -split '\.' | ForEach-Object { [int]$_ }
-    $hostBits = 32 - $cidrPrefix
-    if ($hostBits -gt 8) {
-        Write-Warning "Network scan is optimized for /24 or larger networks; results may be incomplete."
+# Function: Build the host list for a CIDR subnet
+function Get-HostScanTargets {
+    param(
+        [Parameter(Mandatory)]
+        [string]$NetworkAddress,
+
+        [Parameter(Mandatory)]
+        [int]$Prefix,
+
+        [Parameter(Mandatory)]
+        [string]$LocalIPAddress
+    )
+
+    if ($Prefix -ge 31) {
+        Write-Warning "Subnet /$Prefix does not provide a standard host range to scan."
+        return @()
     }
-    $baseIP = $networkOctets[0..2] -join '.'
-    $activeCount = 0
-    1..254 | ForEach-Object {
-        $target = "$baseIP.$_"
-        if ($target -ne $localIP) {
-            if (Test-Connection -Quiet -Count 1 -ComputerName $target -TimeoutSeconds 3) {
-                $activeCount++
-            }
+
+    $hostBits = 32 - $Prefix
+    $usableHosts = [int64]([math]::Pow(2, $hostBits) - 2)
+
+    if ($usableHosts -gt $MaxHostsToScan) {
+        Write-Warning "Skipping host scan for $NetworkAddress/$Prefix because it contains $usableHosts hosts, which exceeds the limit of $MaxHostsToScan."
+        return $null
+    }
+
+    $networkInt = Convert-IPv4ToUInt32 -IPAddress $NetworkAddress
+    $broadcastInt = $networkInt + [uint32]([math]::Pow(2, $hostBits) - 1)
+    $targets = New-Object System.Collections.Generic.List[string]
+
+    for ($address = $networkInt + 1; $address -lt $broadcastInt; $address++) {
+        $target = Convert-UInt32ToIPv4 -Address $address
+        if ($target -ne $LocalIPAddress) {
+            $targets.Add($target)
         }
     }
+
+    return $targets.ToArray()
+}
+
+# Function: Test if a host responds to ICMP without long blocking waits
+function Test-HostReachable {
+    param(
+        [Parameter(Mandatory)]
+        [string]$IPAddress
+    )
+
+    $ping = [System.Net.NetworkInformation.Ping]::new()
+    try {
+        $reply = $ping.Send($IPAddress, $PingTimeoutMilliseconds)
+        return $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
+    } catch {
+        return $false
+    } finally {
+        $ping.Dispose()
+    }
+}
+
+# Function: Detect whether ICMP probing is available on this system/network
+function Test-PingCapability {
+    param(
+        [Parameter(Mandatory)]
+        [string]$IPAddress
+    )
+
+    $ping = [System.Net.NetworkInformation.Ping]::new()
+    try {
+        $null = $ping.Send($IPAddress, [Math]::Max($PingTimeoutMilliseconds, 250))
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $ping.Dispose()
+    }
+}
+
+# Function: Discover active hosts on the network
+function Get-ActiveHosts {
+    if ($SkipHostScan) {
+        return "Skipped"
+    }
+
+    $targets = Get-HostScanTargets -NetworkAddress $networkAddress -Prefix $cidrPrefix -LocalIPAddress $localIP
+    if ($null -eq $targets) {
+        return "Skipped"
+    }
+
+    if ($targets.Count -eq 0) {
+        return 0
+    }
+
+    $probeTarget = if ($routerLocalIP -and $routerLocalIP -ne "Unavailable") { $routerLocalIP } else { $targets[0] }
+    if (-not (Test-PingCapability -IPAddress $probeTarget)) {
+        Write-Warning "ICMP probing is unavailable on this system or network; host scan skipped."
+        return "Unavailable"
+    }
+
+    if ($PSVersionTable.PSVersion.Major -ge 7) {
+        $activeHosts = $targets | ForEach-Object -Parallel {
+            $ping = [System.Net.NetworkInformation.Ping]::new()
+            try {
+                $reply = $ping.Send($_, $using:PingTimeoutMilliseconds)
+                if ($reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
+                    $_
+                }
+            } catch {
+            } finally {
+                $ping.Dispose()
+            }
+        } -ThrottleLimit $ThrottleLimit
+
+        return @($activeHosts).Count
+    }
+
+    $activeCount = 0
+    foreach ($target in $targets) {
+        if (Test-HostReachable -IPAddress $target) {
+            $activeCount++
+        }
+    }
+
     return $activeCount
 }
 $deviceCount = Get-ActiveHosts
