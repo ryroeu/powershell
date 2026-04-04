@@ -51,9 +51,9 @@ function New-RemoteRDPCertificate {
 
         $result = Invoke-Command -Session $PSSession -HideComputerName -ArgumentList $ValidUntil, $HashAlgorithm, $KeyLength -ScriptBlock {
             param(
-                [datetime]$using:ValidUntil,
-                [string]$using:Algorithm,
-                [int]$using:KeyLength
+                [datetime]$using:using:ValidUntil,
+                [string]$using:using:Algorithm,
+                [int]$using:using:KeyLength
             )
 
             Add-Type -AssemblyName System.Security
