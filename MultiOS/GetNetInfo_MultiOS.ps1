@@ -358,7 +358,7 @@ function Get-ActiveHost {
 
     return $activeCount
 }
-$deviceCount = Get-ActiveHosts
+$deviceCount = Get-ActiveHost
 
 # Output results
 $result = [PSCustomObject]@{
