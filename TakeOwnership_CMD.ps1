@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Takes ownership cmd.
+    Takes ownership of a folder and its contents using cmd.
 #>
 
 ﻿function Set-AdminOwnershipAndPermission {
