@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Tests pester.
+    Tests reachability of internet services.
 #>
 
 Describe "Invoke-RestMethod Responses" {
