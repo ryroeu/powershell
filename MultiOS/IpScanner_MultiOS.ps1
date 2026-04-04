@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Scans a local network subnet and displays IP addresses that are actively responding to a ping.
   This script is designed to be cross-platform and works on Windows, macOS, and Linux
@@ -62,7 +62,7 @@ function Find-Network {
     }
 
     Write-Host "Scanning for active hosts..." -ForegroundColor Green
-    
+
     # Use Test-Connection with parallel processing to improve performance.
     # The output of the parallel block is collected directly in $activeHosts.
     $activeHosts = $ipAddressesToScan | ForEach-Object -ThrottleLimit 10 -Parallel {

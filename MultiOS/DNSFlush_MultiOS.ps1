@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Flushes the DNS cache on Windows, macOS, or Linux.
 
@@ -25,7 +25,7 @@ Write-Host "-------------------------------------"
 
 # --- Function to Execute Windows DNS Flush ---
 # Avoid repeating the code block
-function Clear-WindowsDns {
+function Clear-WindowsDn {
     Write-Host "Executing: ipconfig /flushdns"
     try {
         # Execute and capture output/errors

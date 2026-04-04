@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
     Cross-platform PowerShell script to gather network information.
 .DESCRIPTION
@@ -174,9 +174,9 @@ function Get-LocalIPInfo {
 }
 
 $ipInfoObj = Get-LocalIPInfo
-if (-not $ipInfoObj) { 
-    Write-Error "Failed to retrieve local IP information." 
-    exit 1 
+if (-not $ipInfoObj) {
+    Write-Error "Failed to retrieve local IP information."
+    exit 1
 }
 $localIP = $ipInfoObj.IP
 $cidrPrefix = $ipInfoObj.Subnet
@@ -236,7 +236,7 @@ try {
 }
 
 # Function: Build the host list for a CIDR subnet
-function Get-HostScanTargets {
+function Get-HostScanTarget {
     param(
         [Parameter(Mandatory)]
         [string]$NetworkAddress,
@@ -312,7 +312,7 @@ function Test-PingCapability {
 }
 
 # Function: Discover active hosts on the network
-function Get-ActiveHosts {
+function Get-ActiveHost {
     if ($SkipHostScan) {
         return "Skipped"
     }

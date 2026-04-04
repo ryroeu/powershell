@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves system information across multiple operating systems.
 #>
@@ -9,11 +9,11 @@
     Detects the operating system, displays system hardware information, and saves it to a text file on the desktop.
 
 .DESCRIPTION
-    This script checks if it is running on Windows, Linux, or macOS and then runs OS-specific commands 
-    to display hardware details such as CPU, memory, disk, and more. The complete output is captured and 
+    This script checks if it is running on Windows, Linux, or macOS and then runs OS-specific commands
+    to display hardware details such as CPU, memory, disk, and more. The complete output is captured and
     saved by default to "HardwareInfo.txt" on the user’s desktop.
-    
-    **Note:** On Linux and macOS some commands (like `lshw` or `system_profiler`) may not be installed 
+
+    **Note:** On Linux and macOS some commands (like `lshw` or `system_profiler`) may not be installed
     by default or might require elevated privileges.
 
 .NOTES

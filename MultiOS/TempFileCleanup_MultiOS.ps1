@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Cleans up temporary file across multiple operating systems.
 #>
@@ -41,13 +41,13 @@ function Start-Cleanup {
     # --- Cleanup logic starts here ---
     if ($IsWindows) {
         Write-Output "Detected Windows OS. Cleaning temporary directories..."
-        
+
         $windowsPaths = @(
             "$Env:TEMP", # User temp directory
             "C:\Windows\Temp",
             "C:\Windows\SoftwareDistribution\Download"
         )
-        
+
         foreach ($path in $windowsPaths) {
             if (Test-Path $path) {
                 try {
@@ -67,12 +67,12 @@ function Start-Cleanup {
     }
     elseif ($IsLinux -or $IsMacOS) {
         Write-Output "Detected Linux/macOS. Cleaning temporary directories..."
-        
+
         $tempPaths = @(
             "/tmp",
             "/var/tmp"
         )
-        
+
         foreach ($path in $tempPaths) {
             if (Test-Path $path) {
                 try {

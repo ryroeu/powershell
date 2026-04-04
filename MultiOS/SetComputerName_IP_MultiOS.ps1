@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Sets the computer name (hostname) and configures a static IP address on Windows, macOS, or Linux.
 
@@ -9,7 +9,7 @@
       • Linux: Uses sudo with hostnamectl and nmcli (requires NetworkManager).
       • macOS: Uses sudo with scutil and networksetup.
     You can optionally specify the network interface name. If not provided, the script uses a default value for each OS.
-    
+
 .PARAMETER ComputerName
     The new computer name/hostname.
 
