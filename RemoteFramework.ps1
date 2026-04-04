@@ -15,7 +15,7 @@ IMPLIED.
 #>
 
 #TODO: DEFINE A VALID COMMAND NAME
-Function Verb-Noun {
+Function Get-RemoteFramework {
 
     #TODO: Create help documentation for your command
 
