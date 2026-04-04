@@ -1,14 +1,28 @@
-$zones = (Get-DnsServerZone).ZoneName
-$results = foreach ($zone in $zones) {
-    $zoneData = Get-DnsServerResourceRecord $zone
-    foreach ($record in $zoneData) {
-        [PSCustomObject]@{
-            ZoneName = $zone
-            HostName = $record.HostName
+[CmdletBinding()]
+param(
+    [string]$OutputPath = (Join-Path -Path $PWD -ChildPath 'DNSRecords.csv'),
+    [switch]$ShowGridView
+)
+
+$results = foreach ($zone in Get-DnsServerZone) {
+    foreach ($record in Get-DnsServerResourceRecord -ZoneName $zone.ZoneName) {
+        [pscustomobject]@{
+            ZoneName   = $zone.ZoneName
+            HostName   = $record.HostName
             RecordType = $record.RecordType
-            RecordData = $record.RecordData
+            RecordData = $record.RecordData.ToString()
         }
     }
 }
-$results | Out-GridView
-$results | Export-Csv -Path C:\DNSRecords.csv -NoTypeInformation
+
+if ($ShowGridView) {
+    if (Get-Command -Name Out-GridView -ErrorAction SilentlyContinue) {
+        $results | Out-GridView -Title 'DNS Zone Records'
+    }
+    else {
+        Write-Warning 'Out-GridView is not available in this session. Skipping the grid view display.'
+    }
+}
+
+$results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+$results

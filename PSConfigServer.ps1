@@ -1,15 +1,22 @@
-﻿###### Run all from an Elevated PowerShell session ##########
-##### Enable Remote Management #####
-WinRM quickconfig
-Enable-PSRemoting -Force
+#Requires -RunAsAdministrator
 
-##### Trusted Hosts Setup #####
-Set-Item WSMan:\localhost\Client\TrustedHosts *.yourdomain.com
-Restart-Service WinRM
+[CmdletBinding(SupportsShouldProcess = $true)]
+param(
+    [switch]$EnableCredSSP,
 
-##### Enable CredSSP #####
-Enable-WSManCredSSP -Role Server -Force
+    [ValidateSet('DoNotChange', 'RemoteSigned', 'AllSigned', 'Bypass')]
+    [string]$ExecutionPolicy = 'DoNotChange'
+)
 
-##### Set Execution Policy #####
-Set-ExecutionPolicy -scope LocalMachine Unrestricted -Force
-Set-ExecutionPolicy -scope CurrentUser Unrestricted -Force
+if ($PSCmdlet.ShouldProcess('WinRM', 'Enable PowerShell remoting on this server')) {
+    Set-WSManQuickConfig -Force | Out-Null
+    Enable-PSRemoting -Force -SkipNetworkProfileCheck
+}
+
+if ($EnableCredSSP -and $PSCmdlet.ShouldProcess('CredSSP server role', 'Enable CredSSP on this server')) {
+    Enable-WSManCredSSP -Role Server -Force
+}
+
+if ($ExecutionPolicy -ne 'DoNotChange' -and $PSCmdlet.ShouldProcess('Execution Policy', ('Set LocalMachine execution policy to {0}' -f $ExecutionPolicy))) {
+    Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy $ExecutionPolicy -Force
+}

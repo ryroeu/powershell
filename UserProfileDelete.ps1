@@ -1,143 +1,172 @@
-﻿#Setup script variables
-#add computers to computers variable to search for profiles on those computers
-	[array] $Computers = Get-Content C:\Computers.txt
-	$log = "\\server\share\log.txt"
-	$date = Get-Date
+#Requires -RunAsAdministrator
 
-#Reset variables
-	$selecteduser = ""
-	$profilelist = @()
+[CmdletBinding()]
+param(
+    [string]$ComputersPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Computers.txt'),
+    [string]$LogPath = (Join-Path -Path $PSScriptRoot -ChildPath 'UserProfileDelete.log')
+)
 
-
-Function SetupForm {
-	#Setup the form
-	Add-Type -AssemblyName System.Windows.Forms
-	Add-Type -AssemblyName System.Drawing
-
-	$objForm = New-Object System.Windows.Forms.Form
-	$objForm.Text = "Select user(s)"
-	$objForm.Size = New-Object System.Drawing.Size(300,320)
-	$objForm.StartPosition = "CenterScreen"
-	$btnDelete = New-Object System.Windows.Forms.Button
-	$btnDelete.Location = New-Object System.Drawing.Size(120,240)
-	$btnDelete.Size = New-Object System.Drawing.Size(75,23)
-	$btnDelete.Text = "Delete Profile"
-	$objForm.Controls.Add($btnDelete)
-
-	#When a user clicks the delete button get the details of the logged in users and calls the DeleteProfile function
-	$btnDelete.Add_Click({
-	#calls the delete profile function
-		DeleteProfile
-		}
-		)
-
-	$CancelButton = New-Object System.Windows.Forms.Button
-	$CancelButton.Location = New-Object System.Drawing.Size(200,240)
-	$CancelButton.Size = New-Object System.Drawing.Size(75,23)
-	$CancelButton.Text = "Cancel"
-	$CancelButton.Add_Click({$objForm.Close()})
-	$objForm.Controls.Add($CancelButton)
-
-	$objLabel = New-Object System.Windows.Forms.Label
-	$objLabel.Location = New-Object System.Drawing.Size(10,20)
-	$objLabel.Size = New-Object System.Drawing.Size(280,20)
-	$objLabel.Text = "Please select user to delete profile:"
-	$objForm.Controls.Add($objLabel)
-
-	$objListBox = New-Object System.Windows.Forms.ListBox
-	$objListBox.Location = New-Object System.Drawing.Size(10,40)
-	$objListBox.Size = New-Object System.Drawing.Size(260,300)
-	$objListBox.Height = 180
-	$objListBox.SelectionMode = "MultiExtended"
-
-#Run through each computer in the computers variable to compile a list of unique user accounts across all servers
-ForEach ($computer in $Computers) {
-	#use WMI to find all users with a profile on the servers
-		Try{
-			[array]$users = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -Filter "LocalPath Like 'C:\\Users\\%'" -ErrorAction Stop
-			}
-		Catch {
- 			Write-Warning "$($error[0]) "
-			Break
-			}
-
-	#compile the profile list and remove the path prefix leaving just the usernames
-	$profilelist = $profilelist + $users.localpath -replace "C:\\users\\"
-
-	#filter the user names to show only unique values left to prevent duplicates from profile existing on multiple computers
-	$uniqueusers = $profilelist | Select-Object -Unique | Sort-Object
-	}
-
-#adds the unique users to the combo box
-	ForEach($user in $uniqueusers) {
-		[void] $objListBox.Items.Add($user)
-	}
-
-	$objForm.Controls.Add($objListBox)
-	$objForm.Topmost = $True
-	$objForm.Add_Shown({$objForm.Activate()})
-	[void] $objForm.ShowDialog()
-
+$isWindowsPlatform = ($IsWindows -eq $true) -or ($env:OS -eq 'Windows_NT')
+if (-not $isWindowsPlatform) {
+    throw 'UserProfileDelete.ps1 is a Windows-only script.'
 }
 
-Function DeleteProfile {
-	ForEach ($x in $objListBox.SelectedItems) {
-		#Add the path prefix back to the selected user
-		$selecteduser = $x
-		$selectedUser = "C:\Users\$selecteduser"
-
-		#This section reads through all the computers and deletes the profile from all the computers - it catches any errors.
-
-		ForEach ($computer in $Computers) {
-			Try {
-				$userProfile = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile | Where-Object { $_.LocalPath -eq $selecteduser }
-				Remove-CimInstance -InputObject $userProfile
-				Write-Host -ForegroundColor Green "$selecteduser has been deleted from $computer"
-				Add-Content $log "$date $selecteduser profile has been deleted from $computer"
-			}
-
-
-
-			Catch [System.Management.Automation.MethodInvocationException]{
-				Write-Host -ForegroundColor Red "ERROR: Profile is currently locked on $computer - please use log off user script first"
-				Add-Content $log "$date $selecteduser Profile is currently locked on $computer - please use log off user script first"
-			}
-
-			Catch [System.Management.Automation.RuntimeException] {
-				Write-Host -ForegroundColor Yellow -BackgroundColor Blue "INFO: $selecteduser Profile does not exist on $computer"
-				Add-Content $log "$date INFO: $selecteduser Profile does not exist on $computer"
-			}
-
-			Catch {
-				Write-Host -ForegroundColor Red "ERROR: an unknown error occoured. The error response was $error[0]"
-				Add-Content $log "$date ERROR: an unknown error occoured. The error response was $error[0]"
-			}
-		 }
-		 }
-
-	#Add a label to say process is complete
-	$objLabel1 = New-Object System.Windows.Forms.Label
-	$objLabel1.Location = New-Object System.Drawing.Size(10,100)
-	$objLabel1.Size = New-Object System.Drawing.Size(280,20)
-	$objLabel1.Text = "Deletion complete, check log for more details."
-	$objForm.Controls.Add($objLabel1)
-
-	#Add a view log button to view the log file
-	$LogButton = New-Object System.Windows.Forms.Button
-	$LogButton.Location = New-Object System.Drawing.Size(50,150)
-	$LogButton.Size = New-Object System.Drawing.Size(75,23)
-	$LogButton.Text = "View Log"
-	$LogButton.Add_Click({Invoke-Item $log})
-	$objForm.Controls.Add($LogButton)
-
+try {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+}
+catch {
+    throw 'Unable to load System.Windows.Forms. Run this script on Windows with the desktop runtime available.'
 }
 
-#Check script was run as admin
-If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
-	{
-	[System.Windows.Forms.MessageBox]::Show("It doesn't appear you have run this PowerShell session with administrative rights, the script may not function correctly. If no users are displayed please ensure you run the script again using administrive rights.")
-	}
+if (-not (Test-Path -LiteralPath $ComputersPath)) {
+    throw ('Computer list not found: {0}' -f $ComputersPath)
+}
 
+$logDirectory = Split-Path -Path $LogPath -Parent
+if ($logDirectory -and -not (Test-Path -LiteralPath $logDirectory)) {
+    New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+}
 
-#Start the form
-SetupForm
+$script:Computers = Get-Content -Path $ComputersPath |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    Sort-Object -Unique
+
+if (-not $script:Computers) {
+    throw ('No computer names were found in {0}' -f $ComputersPath)
+}
+
+$script:LogPath = $LogPath
+$script:Form = $null
+$script:ListBox = $null
+$script:StatusLabel = $null
+
+function Write-ProfileLog {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message
+    )
+
+    Add-Content -Path $script:LogPath -Value ('{0:s} {1}' -f (Get-Date), $Message)
+}
+
+function Get-ProfileNames {
+    $profileNames = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($computer in $script:Computers) {
+        try {
+            $profiles = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -ErrorAction Stop |
+                Where-Object { $_.LocalPath -like 'C:\Users\*' -and -not $_.Special }
+
+            foreach ($profile in $profiles) {
+                $profileNames.Add([System.IO.Path]::GetFileName($profile.LocalPath))
+            }
+        }
+        catch {
+            $message = 'Failed to query profiles on {0}: {1}' -f $computer, $_.Exception.Message
+            Write-Warning $message
+            Write-ProfileLog -Message $message
+        }
+    }
+
+    $profileNames | Sort-Object -Unique
+}
+
+function Remove-SelectedProfiles {
+    $selectedUsers = @($script:ListBox.SelectedItems | ForEach-Object { $_.ToString() })
+
+    if (-not $selectedUsers) {
+        [System.Windows.Forms.MessageBox]::Show('Select one or more profiles to delete first.')
+        return
+    }
+
+    foreach ($userName in $selectedUsers) {
+        $profilePath = 'C:\Users\{0}' -f $userName
+
+        foreach ($computer in $script:Computers) {
+            try {
+                $userProfile = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -ErrorAction Stop |
+                    Where-Object LocalPath -eq $profilePath
+
+                if (-not $userProfile) {
+                    $message = 'INFO: {0} profile does not exist on {1}' -f $profilePath, $computer
+                    Write-ProfileLog -Message $message
+                    continue
+                }
+
+                $userProfile | Remove-CimInstance -ErrorAction Stop
+                $message = '{0} has been deleted from {1}' -f $profilePath, $computer
+                Write-Output $message
+                Write-ProfileLog -Message $message
+            }
+            catch {
+                $message = 'ERROR: Failed to delete {0} on {1}: {2}' -f $profilePath, $computer, $_.Exception.Message
+                Write-Warning $message
+                Write-ProfileLog -Message $message
+            }
+        }
+    }
+
+    $script:StatusLabel.Text = 'Deletion complete. Review the log for details.'
+    [System.Windows.Forms.MessageBox]::Show(('Deletion complete. Review the log at {0}' -f $script:LogPath))
+}
+
+function Show-ProfileDeletionForm {
+    $profileNames = @(Get-ProfileNames)
+
+    $script:Form = New-Object System.Windows.Forms.Form
+    $script:Form.Text = 'Delete Remote User Profiles'
+    $script:Form.Size = New-Object System.Drawing.Size(420, 380)
+    $script:Form.StartPosition = 'CenterScreen'
+    $script:Form.TopMost = $true
+
+    $titleLabel = New-Object System.Windows.Forms.Label
+    $titleLabel.Location = New-Object System.Drawing.Point(10, 10)
+    $titleLabel.Size = New-Object System.Drawing.Size(390, 20)
+    $titleLabel.Text = 'Select one or more profile folders to remove from the listed computers:'
+    $script:Form.Controls.Add($titleLabel)
+
+    $script:ListBox = New-Object System.Windows.Forms.ListBox
+    $script:ListBox.Location = New-Object System.Drawing.Point(10, 35)
+    $script:ListBox.Size = New-Object System.Drawing.Size(390, 220)
+    $script:ListBox.SelectionMode = 'MultiExtended'
+    foreach ($profileName in $profileNames) {
+        [void]$script:ListBox.Items.Add($profileName)
+    }
+    $script:Form.Controls.Add($script:ListBox)
+
+    $deleteButton = New-Object System.Windows.Forms.Button
+    $deleteButton.Location = New-Object System.Drawing.Point(100, 295)
+    $deleteButton.Size = New-Object System.Drawing.Size(95, 28)
+    $deleteButton.Text = 'Delete Profile'
+    $deleteButton.Add_Click({ Remove-SelectedProfiles })
+    $script:Form.Controls.Add($deleteButton)
+
+    $logButton = New-Object System.Windows.Forms.Button
+    $logButton.Location = New-Object System.Drawing.Point(205, 295)
+    $logButton.Size = New-Object System.Drawing.Size(95, 28)
+    $logButton.Text = 'View Log'
+    $logButton.Add_Click({
+            if (Test-Path -LiteralPath $script:LogPath) {
+                Invoke-Item -Path $script:LogPath
+            }
+        })
+    $script:Form.Controls.Add($logButton)
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(310, 295)
+    $cancelButton.Size = New-Object System.Drawing.Size(90, 28)
+    $cancelButton.Text = 'Close'
+    $cancelButton.Add_Click({ $script:Form.Close() })
+    $script:Form.Controls.Add($cancelButton)
+
+    $script:StatusLabel = New-Object System.Windows.Forms.Label
+    $script:StatusLabel.Location = New-Object System.Drawing.Point(10, 265)
+    $script:StatusLabel.Size = New-Object System.Drawing.Size(390, 20)
+    $script:StatusLabel.Text = 'Ready.'
+    $script:Form.Controls.Add($script:StatusLabel)
+
+    [void]$script:Form.ShowDialog()
+}
+
+Show-ProfileDeletionForm
