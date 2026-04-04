@@ -1,4 +1,4 @@
-function Set-AdminOwnershipAndPermissions {
+﻿function Set-AdminOwnershipAndPermission {
     [CmdletBinding(SupportsShouldProcess=$true)] # Adds -WhatIf and -Confirm support
     param(
         [Parameter(Mandatory=$true, Position=0)]

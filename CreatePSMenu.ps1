@@ -1,4 +1,4 @@
-using namespace System.Management.Automation.Host
+﻿using namespace System.Management.Automation.Host
 
 <# FUNCTIONS #>
 function New-Menu {
@@ -12,7 +12,7 @@ function New-Menu {
         [ValidateNotNullOrEmpty()]
         [string]$Question
     )
-    
+
     $red = [ChoiceDescription]::new('&Red', 'Favorite color: Red')
     $blue = [ChoiceDescription]::new('&Blue', 'Favorite color: Blue')
     $yellow = [ChoiceDescription]::new('&Yellow', 'Favorite color: Yellow')
@@ -34,7 +34,7 @@ function Show-Menu {
     )
     Clear-Host
     Write-Host "================ $Title ================"
-    
+
     Write-Host "1: Press '1' for this option."
     Write-Host "2: Press '2' for this option."
     Write-Host "3: Press '3' for this option."
@@ -52,10 +52,10 @@ do {
     switch ($selection) {
         '1' {
             'You chose option #1'
-        } 
+        }
         '2' {
             'You chose option #2'
-        } 
+        }
         '3' {
             'You chose option #3'
         }

@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Measure local network interface bandwidth (Rx/Tx Mbps) by sampling adapter statistics.
 
@@ -52,7 +52,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Get-Adapters {
+function Get-Adapter {
   $adapters = Get-NetAdapter -Physical:$(!$IncludeVirtual) -ErrorAction SilentlyContinue |
               Where-Object { $_.Status -eq 'Up' }
   if (-not $adapters -and -not $IncludeVirtual) {
@@ -70,7 +70,7 @@ function Get-Adapters {
   $adapters
 }
 
-function Get-Stats {
+function Get-Stat {
   param([string[]]$Names)
   $raw = Get-NetAdapterStatistics -Name $Names -ErrorAction Stop
   foreach ($r in $raw) {

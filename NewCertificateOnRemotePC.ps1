@@ -1,9 +1,9 @@
-Function New-RemoteRDPCertificate() {    # Kind of redudant; I know... (¬､¬)
+﻿Function New-RemoteRDPCertificate() {    # Kind of redudant; I know... (¬､¬)
 
-    <# 
-        .SYNOPSIS 
-            To be used instead of the standard 'Set-RDPCertificate' when you want to create a new 
-            self-signed certificate on the remote computer. 
+    <#
+        .SYNOPSIS
+            To be used instead of the standard 'Set-RDPCertificate' when you want to create a new
+            self-signed certificate on the remote computer.
     #>
     [CmdletBinding(DefaultParameterSetName="ByComputerName", PositionalBinding=$false)]
     [OutputType([psobject])]
@@ -41,9 +41,9 @@ Function New-RemoteRDPCertificate() {    # Kind of redudant; I know... (¬､¬)
         $sessionArgs = @($ValidUntil, $HashAlgorithm.ToString(), $KeyLength)
         $result = Invoke-Command -Session $PSSession -HideComputerName -ArgumentList $sessionArgs -ScriptBlock {
             param (
-                [datetime] $validUntil = $args[0],
-                [string] $algorithm = $args[1],
-                [int] $KeyLength = $args[2]
+                [datetime] $using:validUntil = $args[0],
+                [string] $using:algorithm = $args[1],
+                [int] $using:KeyLength = $args[2]
             )
             Add-Type -AssemblyName System.Security;
             $extsToAdd = New-Object 'System.Collections.Generic.List[object]';

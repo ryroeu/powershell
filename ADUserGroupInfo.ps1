@@ -1,4 +1,4 @@
-
+﻿
 # Build an array of the objects you want to check here. Can be local paths, UNCs etc. Input method can be directly in the script as below, or imported from an external source.
 $Paths = "\\computername.domain.com\directory"
 # Create and initialize a new array for the output
@@ -18,7 +18,7 @@ foreach ($path in $paths){
         # If it is a user, lets build a new object with the details we want
         if ($ACLobjectType -eq "user"){
             # Create a new System.Object
-            $objResults = New-Object System.Object 
+            $objResults = New-Object System.Object
             # Get AD user object information using Quest AD CMDlet
             $user = Get-ADUser -SizeLimit 0 $strObject | Select-Object SamAccountName,DisplayName,AccountisDisabled
             # Populate the results object with data
@@ -35,7 +35,7 @@ foreach ($path in $paths){
             # Add the object data to the $Output array
             $Output += $objResults
             # Otherwise, the object is going to be a group
-        } 
+        }
         else {
             # So, get a list of the members of each group
             $groupmembers = Get-ADGroupMember -SizeLimit 0 $strObject | Select-Object SamAccountName,DisplayName,Type,AccountisDisabled

@@ -1,4 +1,4 @@
-### Remove old versions of PS Modules 
+﻿### Remove old versions of PS Modules
 $Mods = Get-Module -ListAvailable
 foreach ($Mod in $Mods){
     Write-Host "Checking $($mod.name)"

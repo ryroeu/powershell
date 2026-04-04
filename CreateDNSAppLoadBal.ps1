@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Create/maintain DNS round-robin records for an app (Windows DNS Server).
 

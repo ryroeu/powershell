@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Post-uninstall cleanup for Microsoft 365 Apps leftovers.
 

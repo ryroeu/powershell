@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Uninstall Microsoft 365 Apps (Click-to-Run) using ODT.
 

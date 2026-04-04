@@ -30,7 +30,7 @@
     #$updateTargetPassed = "d:\sources\install.wim:4"
     #$patchpath = "D:\software\Windows 2012 Updates\"
 
-    if(($updateTargetPassed.ToLower().Contains(".vhd")) -eq $true) # if its VHD or VHDX. Contains is case sensitive so have to convert to lower when comparing 
+    if(($updateTargetPassed.ToLower().Contains(".vhd")) -eq $true) # if its VHD or VHDX. Contains is case sensitive so have to convert to lower when comparing
     {
         $isVHD = $true
     }
@@ -50,15 +50,15 @@
         else
         {
             mount-vhd -path $updateTarget
-            $disks = Get-CimInstance -ClassName Win32_DiskDrive | where Caption -eq "Microsoft Virtual Disk"            
+            $disks = Get-CimInstance -ClassName Win32_DiskDrive | Where-Object Caption -eq "Microsoft Virtual Disk"
             foreach ($disk in $disks)
-            {            
-                $vols = Get-CimAssociatedInstance -CimInstance $disk -ResultClassName Win32_DiskPartition             
+            {
+                $vols = Get-CimAssociatedInstance -CimInstance $disk -ResultClassName Win32_DiskPartition
                 foreach ($vol in $vols)
-                {            
-                    $updatedrive = Get-CimAssociatedInstance -CimInstance $vol -ResultClassName Win32_LogicalDisk |            
-                    where VolumeName -ne 'System Reserved'          
-                }            
+                {
+                    $updatedrive = Get-CimAssociatedInstance -CimInstance $vol -ResultClassName Win32_LogicalDisk |
+                    Where-Object VolumeName -ne 'System Reserved'
+                }
             }
             $updatepath = $updatedrive.DeviceID + "\"
         }
@@ -84,7 +84,7 @@
 
             # Mount it as folder
             #dism /get-wiminfo /wimfile:install.wim
-            dism /Mount-Wim /wimfile:$updateTarget /index:$updateTargetIndex /mountdir:$updatepath 
+            dism /Mount-Wim /wimfile:$updateTarget /index:$updateTargetIndex /mountdir:$updatepath
         }
         else
         {
@@ -94,7 +94,7 @@
     }
 
     # For WIM or VHD
-    $updates = get-childitem -path $patchpath -Recurse | where {($_.extension -eq ".msu") -or ($_.extension -eq ".cab")} | select fullname
+    $updates = get-childitem -path $patchpath -Recurse | Where-Object {($_.extension -eq ".msu") -or ($_.extension -eq ".cab")} | Select-Object fullname
     foreach($update in $updates)
     {
         write-debug $update.fullname
@@ -112,7 +112,7 @@
     }
     else
     {
-        dism /Unmount-Wim /mountdir:$updatepath /commit 
+        dism /Unmount-Wim /mountdir:$updatepath /commit
         #dism /Unmount-Wim /mountdir:$updatepath /discard
     }
 }

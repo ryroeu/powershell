@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Archive (optional) and clear Windows Event Logs locally or on remote computers.
 

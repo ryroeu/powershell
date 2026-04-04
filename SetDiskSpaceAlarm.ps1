@@ -1,4 +1,4 @@
-# Replace "smtp.domain.com" with your mail server name
+﻿# Replace "smtp.domain.com" with your mail server name
 Add-Type -AssemblyName System.Net.Mail
 
 $smtp = New-Object System.Net.Mail.SmtpClient("smtp.domain.com")
@@ -24,12 +24,12 @@ ForEach ($Result In $Results){
 	$space = $Result.FreeSpace
 	$thresh = if($drive -eq 'C:'){$driveCthreshold} else {$threshold}
 
-	# Send e-mail if the free space is less than threshold parameter 
+	# Send e-mail if the free space is less than threshold parameter
 	$smtp.Send(
-	$emailFrom, 
-	$emailTo, 
+	$emailFrom,
+	$emailTo,
 	# E-mail subject
 	"Disk $drive on $hostname has less than $thresh GB of free space left ",
-	# E-mail body 
+	# E-mail body
 	("{0:N0}" -f [math]::truncate($space/1MB))+" MB")
 }

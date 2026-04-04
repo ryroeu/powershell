@@ -1,4 +1,4 @@
-$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
+﻿$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
 $InactiveOU = "OU=Inactive Users,OU=NameOfOU,DC=domain,DC=com"
 $ExpiredOU = "OU=Expired Users,OU=NameOfOU,DC=domain,DC=com"
 $DisabledOU = "OU=Disabled Users,OU=NameOfOU,DC=domain,DC=com"
@@ -18,7 +18,7 @@ Search-ADAccount -SearchBase $TargetOU `
 ### Move Inactive Users to new OU ###
 Search-ADAccount -SearchBase $TargetOU -AccountInactive -UsersOnly -TimeSpan 90.00:00:00 | Move-ADObject -TargetPath $InactiveOU
 
-##########################################################################    
+##########################################################################
 ### Export Expired Users to CSV for Reference ###
 Search-ADAccount -SearchBase $TargetOU `
                  -AccountExpired `

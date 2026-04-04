@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Clear the ARP/Neighbor cache locally or on remote Windows computers using modern cmdlets.
 
@@ -56,7 +56,7 @@ begin {
   if (-not (Test-Admin)) { throw "Run elevated (Administrator) to clear ARP/Neighbor cache." }
 
   # Map AddressFamily to values the cmdlets expect
-  function Get-Families {
+  function Get-Family {
     switch ($AddressFamily) {
       'IPv4' { @('IPv4') }
       'IPv6' { @('IPv6') }

@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Bulk create/maintain DNS round-robin records on a Windows DNS Server from a CSV or JSON plan.
 
@@ -41,7 +41,7 @@
 
   # From CSV, force replace and enable health checks (overrides per-record flags)
   .\CreateDNSAppLoadBalGen.ps1 -Csv .\records.csv -ReplaceExisting -HealthProbe -ProbeType TCP -ProbePort 443
-  
+
 .EXAMPLE
 ZoneName,RecordName,IPv4,IPv6,TTL,ReplaceExisting,HealthProbe,ProbeType,ProbePort,ProbePath
 contoso.com,app,10.0.1.10;10.0.1.11,,60,TRUE,FALSE,,,

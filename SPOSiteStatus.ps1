@@ -1,6 +1,6 @@
 ﻿#Change your tenant admin account below
 $username = "admin@domain.com"
-$password = read-host "password" -AsSecureString 
+$password = read-host "password" -AsSecureString
 $cred = New-Object -TypeName System.Management.Automation.PSCredential -argumentlist $userName, $password
 #
 #Must be SharePoint Admin URL
@@ -16,14 +16,14 @@ Write-Host "4. Set Site Collection to ReadOnly" -ForegroundColor Yellow
 Write-Host "5. Unlock site collection" -ForegroundColor Red
 $choice = Read-Host "Choice [1-5]?"
 #
-switch ($choice) { 
-    1 { Get-SPOSite -Filter {LockState -eq "NoAccess"} } 
-    2 { Get-SPOSite -Filter {LockState -eq "ReadOnly"} } 
+switch ($choice) {
+    1 { Get-SPOSite -Filter {LockState -eq "NoAccess"} }
+    2 { Get-SPOSite -Filter {LockState -eq "ReadOnly"} }
     3 { $site = Read-Host "The site collection you want to set NoAccess"
     Set-SPOSite -Identity $site -LockState "NoAccess" }
     4 { $site = Read-Host "The site collection you want to set ReadOnly"
-    Set-SPOSite -Identity $site -LockState "ReadOnly" } 
-    5 { $site = Read-Host "The site collection you want to UnLock" 
+    Set-SPOSite -Identity $site -LockState "ReadOnly" }
+    5 { $site = Read-Host "The site collection you want to UnLock"
     Set-SPOSite -Identity $site -LockState "UnLock"}
     default {":-) You must be kidding."}
 }

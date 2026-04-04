@@ -1,4 +1,4 @@
-<# 
+﻿<#
 .SYNOPSIS
   Connect to Microsoft Purview (Compliance/Security) PowerShell and EXO modern endpoints.
 

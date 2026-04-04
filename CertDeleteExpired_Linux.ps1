@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 (Linux) Finds and removes expired certificate FILES based on OpenSSL checks.
 
@@ -91,7 +91,7 @@ foreach ($path in $SearchPath) {
             # Execute openssl to get the end date
             # Ignore stderr for now, check output validity
             $opensslOutput = & $openSSLPath x509 -in $filePath -noout -enddate -ErrorAction SilentlyContinue 2>&1
-            
+
             # Basic check if openssl returned the expected line format
             if ($opensslOutput -match '^notAfter=(.+)') {
                 $dateString = $Matches[1].Trim()

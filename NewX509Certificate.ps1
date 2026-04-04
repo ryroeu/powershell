@@ -1,11 +1,11 @@
-using namespace System.Security.Cryptography.X509Certificates
+﻿using namespace System.Security.Cryptography.X509Certificates
 
-function New-X509Certificate { 
+function New-X509Certificate {
     Param (
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [String]$CommonName
-    )      
+    )
     $DN = New-Object -ComObject 'X509Enrollment.CX500DistinguishedName.1'
     $DN.Encode("CN=$CommonName", 0)
 
@@ -46,6 +46,6 @@ function New-X509Certificate {
 
     $Bytes = [Convert]::FromBase64String($Base64)
     $X509Cert = New-Object Security.Cryptography.X509Certificates.X509Certificate2($Bytes, '')
-    
+
     return $X509Cert
 }
