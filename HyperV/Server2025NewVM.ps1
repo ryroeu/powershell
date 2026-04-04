@@ -65,7 +65,7 @@ if (Get-VM -Name $Name -ErrorAction SilentlyContinue) {
 throw "A VM named '$Name' already exists."
 }
 
-$vm = New-VM -Name $Name -Generation 2 -MemoryStartupBytes ($MemoryStartupGB * 1GB) -SwitchName $SwitchName -BootDevice VHD -ErrorAction Stop
+New-VM -Name $Name -Generation 2 -MemoryStartupBytes ($MemoryStartupGB * 1GB) -SwitchName $SwitchName -BootDevice VHD -ErrorAction Stop | Out-Null
 Set-VM -VMName $Name -ProcessorCount $CPU -DynamicMemory -MemoryMinimumBytes 1GB -MemoryMaximumBytes ([math]::Max($MemoryStartupGB * 1GB, 8GB)) -AutomaticCheckpointsEnabled:$Checkpoints.IsPresent
 Add-VMHardDiskDrive -VMName $Name -Path $diskPath
 
