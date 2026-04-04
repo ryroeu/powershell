@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Creates certificate on remote pc.
 #>
@@ -51,9 +51,9 @@ function New-RemoteRDPCertificate {
 
         $result = Invoke-Command -Session $PSSession -HideComputerName -ArgumentList $ValidUntil, $HashAlgorithm, $KeyLength -ScriptBlock {
             param(
-                [datetime]$ValidUntil,
-                [string]$Algorithm,
-                [int]$KeyLength
+                [datetime]$using:ValidUntil,
+                [string]$using:Algorithm,
+                [int]$using:KeyLength
             )
 
             Add-Type -AssemblyName System.Security

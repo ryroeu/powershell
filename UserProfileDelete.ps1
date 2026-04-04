@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 
 <#
 .SYNOPSIS
@@ -55,7 +55,7 @@ function Write-ProfileLog {
     Add-Content -Path $script:LogPath -Value ('{0:s} {1}' -f (Get-Date), $Message)
 }
 
-function Get-ProfileNames {
+function Get-ProfileName {
     $profileNames = [System.Collections.Generic.List[string]]::new()
 
     foreach ($computer in $script:Computers) {
@@ -63,8 +63,8 @@ function Get-ProfileNames {
             $profiles = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -ErrorAction Stop |
                 Where-Object { $_.LocalPath -like 'C:\Users\*' -and -not $_.Special }
 
-            foreach ($profile in $profiles) {
-                $profileNames.Add([System.IO.Path]::GetFileName($profile.LocalPath))
+            foreach ($userProfile in $profiles) {
+                $profileNames.Add([System.IO.Path]::GetFileName($userProfile.LocalPath))
             }
         }
         catch {
@@ -77,7 +77,7 @@ function Get-ProfileNames {
     $profileNames | Sort-Object -Unique
 }
 
-function Remove-SelectedProfiles {
+function Remove-SelectedProfile {
     $selectedUsers = @($script:ListBox.SelectedItems | ForEach-Object { $_.ToString() })
 
     if (-not $selectedUsers) {
