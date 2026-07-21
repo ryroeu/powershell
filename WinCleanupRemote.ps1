@@ -27,7 +27,7 @@ $computers = if ($PSCmdlet.ParameterSetName -eq 'Computer') {
 }
 else {
     Get-ADGroupMember -Identity $WorkstationGroup -Recursive |
-        Where-Object ObjectClass -eq 'computer' |
+        Where-Object ObjectClass -EQ 'computer' |
         Select-Object -ExpandProperty Name
 }
 

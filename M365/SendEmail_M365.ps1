@@ -63,26 +63,26 @@ switch ($PSCmdlet.ParameterSetName) {
 $toRecipients = @($To | ForEach-Object { @{ EmailAddress = @{ Address = $_.Address } } })
 $ccRecipients = @($Cc | ForEach-Object { @{ EmailAddress = @{ Address = $_.Address } } })
 $attachments = @($AttachmentPath | ForEach-Object {
-    $file = Get-Item -LiteralPath $_ -ErrorAction Stop
-    $contentType = switch ($file.Extension.ToLowerInvariant()) {
-        '.csv' { 'text/csv' }
-        '.html' { 'text/html' }
-        '.jpg' { 'image/jpeg' }
-        '.jpeg' { 'image/jpeg' }
-        '.png' { 'image/png' }
-        '.pdf' { 'application/pdf' }
-        '.txt' { 'text/plain' }
-        '.xlsx' { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
-        '.zip' { 'application/zip' }
-        default { 'application/octet-stream' }
-    }
-    @{
-        '@odata.type' = '#microsoft.graph.fileAttachment'
-        Name          = $file.Name
-        ContentType   = $contentType
-        ContentBytes  = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file.FullName))
-    }
-})
+        $file = Get-Item -LiteralPath $_ -ErrorAction Stop
+        $contentType = switch ($file.Extension.ToLowerInvariant()) {
+            '.csv' { 'text/csv' }
+            '.html' { 'text/html' }
+            '.jpg' { 'image/jpeg' }
+            '.jpeg' { 'image/jpeg' }
+            '.png' { 'image/png' }
+            '.pdf' { 'application/pdf' }
+            '.txt' { 'text/plain' }
+            '.xlsx' { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+            '.zip' { 'application/zip' }
+            default { 'application/octet-stream' }
+        }
+        @{
+            '@odata.type' = '#microsoft.graph.fileAttachment'
+            Name          = $file.Name
+            ContentType   = $contentType
+            ContentBytes  = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file.FullName))
+        }
+    })
 
 Connect-MgGraph @connectParameters | Out-Null
 try {

@@ -44,7 +44,7 @@ param(
 $createdSessions = [Collections.Generic.List[Management.Automation.Runspaces.PSSession]]::new()
 try {
     $sessions = if ($PSCmdlet.ParameterSetName -eq 'Session') {
-        @($Session | Where-Object State -eq 'Opened')
+        @($Session | Where-Object State -EQ 'Opened')
     }
     elseif ($PSCmdlet.ParameterSetName -eq 'WinRM') {
         foreach ($computer in $ComputerName) {

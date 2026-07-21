@@ -30,7 +30,7 @@ if (-not (Get-Command openssl -CommandType Application -ErrorAction SilentlyCont
 $files = foreach ($directory in $Path) {
     if (Test-Path -LiteralPath $directory -PathType Container) {
         Get-ChildItem -LiteralPath $directory -File -Recurse -ErrorAction SilentlyContinue |
-            Where-Object Extension -in $Extension
+            Where-Object Extension -In $Extension
     }
 }
 

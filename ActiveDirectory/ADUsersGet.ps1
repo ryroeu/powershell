@@ -19,6 +19,6 @@ $parameters = @{
 if ($SearchBase) { $parameters.SearchBase = $SearchBase }
 $users = Get-ADUser @parameters |
     Select-Object SamAccountName, DisplayName, UserPrincipalName, WhenCreated, PasswordLastSet, PasswordNeverExpires, LastLogonDate,
-        @{Name = 'MemberOf'; Expression = { $_.MemberOf -join ';' } }
+    @{Name = 'MemberOf'; Expression = { $_.MemberOf -join ';' } }
 if ($OutputPath) { $users | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
 $users

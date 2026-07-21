@@ -82,7 +82,7 @@ function ConvertFrom-PlistNode {
             $result = [ordered]@{}
             $children = @(
                 $Node.ChildNodes |
-                Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element }
+                    Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element }
             )
 
             for ($index = 0; $index -lt $children.Count; $index += 2) {
@@ -99,8 +99,8 @@ function ConvertFrom-PlistNode {
         'array' {
             return @(
                 $Node.ChildNodes |
-                Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element } |
-                ForEach-Object { ConvertFrom-PlistNode -Node $_ }
+                    Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element } |
+                    ForEach-Object { ConvertFrom-PlistNode -Node $_ }
             )
         }
         'integer' { return [int64]$Node.InnerText }
@@ -254,14 +254,14 @@ function Get-WindowsDiskInfo {
         }
 
         [PSCustomObject]@{
-            Platform   = 'Windows'
-            DiskNum    = "$($physicalDisk.DeviceID)"
-            Device     = "\\.\PHYSICALDRIVE$($physicalDisk.DeviceID)"
-            Model      = if ($physicalDisk.Model) { $physicalDisk.Model.Trim() } else { '[Unknown]' }
-            Type       = $type
-            DiskSize   = [uint64]$physicalDisk.Size
+            Platform    = 'Windows'
+            DiskNum     = "$($physicalDisk.DeviceID)"
+            Device      = "\\.\PHYSICALDRIVE$($physicalDisk.DeviceID)"
+            Model       = if ($physicalDisk.Model) { $physicalDisk.Model.Trim() } else { '[Unknown]' }
+            Type        = $type
+            DiskSize    = [uint64]$physicalDisk.Size
             DriveLetter = $accessPath
-            AccessPath = $accessPath
+            AccessPath  = $accessPath
         }
     }
 }
@@ -276,7 +276,7 @@ function Get-LinuxDiskInfo {
     }
 
     try {
-        $jsonText = & $lsblk.Source -J -b -o NAME,PATH,MODEL,TYPE,SIZE,MOUNTPOINT,ROTA,RM,TRAN,SERIAL 2>$null | Out-String
+        $jsonText = & $lsblk.Source -J -b -o NAME, PATH, MODEL, TYPE, SIZE, MOUNTPOINT, ROTA, RM, TRAN, SERIAL 2>$null | Out-String
         if (-not $jsonText.Trim()) {
             Write-Warning 'lsblk did not return any data.'
             return
@@ -299,14 +299,14 @@ function Get-LinuxDiskInfo {
         $model = if ($disk.model) { "$($disk.model)".Trim() } elseif ($disk.serial) { "$($disk.serial)".Trim() } else { '[Unknown]' }
 
         [PSCustomObject]@{
-            Platform   = 'Linux'
-            DiskNum    = "$($disk.name)"
-            Device     = if ($disk.path) { "$($disk.path)".Trim() } else { "/dev/$($disk.name)" }
-            Model      = $model
-            Type       = Resolve-LinuxDiskType -Disk $disk
-            DiskSize   = [uint64]$disk.size
+            Platform    = 'Linux'
+            DiskNum     = "$($disk.name)"
+            Device      = if ($disk.path) { "$($disk.path)".Trim() } else { "/dev/$($disk.name)" }
+            Model       = $model
+            Type        = Resolve-LinuxDiskType -Disk $disk
+            DiskSize    = [uint64]$disk.size
             DriveLetter = $accessPath
-            AccessPath = $accessPath
+            AccessPath  = $accessPath
         }
     }
 }
@@ -398,33 +398,36 @@ function Get-MacDiskInfo {
 
         $model = if ($diskInfo) {
             Get-PropertyValue -Object $diskInfo -Name @('MediaName', 'DeviceModel', 'IORegistryEntryName')
-        } else {
+        }
+        else {
             '[Unknown]'
         }
 
         $size = if ($diskInfo) {
             Get-PropertyValue -Object $diskInfo -Name @('TotalSize', 'DiskSize', 'Size')
-        } else {
+        }
+        else {
             ($rows | Measure-Object -Property SizeBytes -Maximum).Maximum
         }
 
         $device = if ($diskInfo) {
             Get-PropertyValue -Object $diskInfo -Name @('DeviceNode')
-        } else {
+        }
+        else {
             "/dev/$wholeDiskId"
         }
 
         $accessPath = Join-AccessPath -Path $mountPoints -EmptyValue '[No Mounts]'
 
         [PSCustomObject]@{
-            Platform   = 'macOS'
-            DiskNum    = $wholeDiskId
-            Device     = if ($device) { $device } else { "/dev/$wholeDiskId" }
-            Model      = if ($model) { "$model".Trim() } else { '[Unknown]' }
-            Type       = Resolve-MacDiskType -DiskInfo $diskInfo -MountPoint $mountPoints
-            DiskSize   = [uint64]$size
+            Platform    = 'macOS'
+            DiskNum     = $wholeDiskId
+            Device      = if ($device) { $device } else { "/dev/$wholeDiskId" }
+            Model       = if ($model) { "$model".Trim() } else { '[Unknown]' }
+            Type        = Resolve-MacDiskType -DiskInfo $diskInfo -MountPoint $mountPoints
+            DiskSize    = [uint64]$size
             DriveLetter = $accessPath
-            AccessPath = $accessPath
+            AccessPath  = $accessPath
         }
     }
 }
@@ -454,5 +457,5 @@ function Get-DiskInfoAdvanced {
 $diskData = Get-DiskInfoAdvanced
 $diskData |
     Select-Object Platform, DiskNum, Device, Model, Type,
-        @{ Name = 'DiskSizeGB'; Expression = { [math]::Round([double]$_.DiskSize / 1GB, 2) } },
-        AccessPath
+    @{ Name = 'DiskSizeGB'; Expression = { [math]::Round([double]$_.DiskSize / 1GB, 2) } },
+    AccessPath

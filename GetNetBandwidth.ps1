@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   Measure local network interface bandwidth (Rx/Tx Mbps) by sampling adapter statistics.
 
@@ -41,51 +41,51 @@
 
 [CmdletBinding()]
 param(
-  [string[]] $InterfaceName,
-  [double]   $DurationSeconds = 10,
-  [double]   $IntervalSeconds = 1,
-  [switch]   $IncludeVirtual,
-  [switch]   $Timeline,
-  [ValidateSet('Table','Json','Csv')] [string] $As = 'Table',
-  [string]   $OutCsv
+    [string[]] $InterfaceName,
+    [double]   $DurationSeconds = 10,
+    [double]   $IntervalSeconds = 1,
+    [switch]   $IncludeVirtual,
+    [switch]   $Timeline,
+    [ValidateSet('Table', 'Json', 'Csv')] [string] $As = 'Table',
+    [string]   $OutCsv
 )
 
 $ErrorActionPreference = 'Stop'
 
 function Get-Adapter {
-  param(
-    [string[]]$NamePattern,
-    [bool]$IncludeVirtualAdapter
-  )
+    param(
+        [string[]]$NamePattern,
+        [bool]$IncludeVirtualAdapter
+    )
 
-  $adapters = Get-NetAdapter -Physical:(-not $IncludeVirtualAdapter) -ErrorAction SilentlyContinue |
-              Where-Object { $_.Status -eq 'Up' }
-  if (-not $adapters -and -not $IncludeVirtualAdapter) {
-    # Fallback: include virtual if no physical adapters are up
-    $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
-  }
-  if ($NamePattern) {
-    $patterns = $NamePattern
-    $adapters = $adapters | Where-Object {
-      $name = $_.Name
-      foreach ($p in $patterns) { if ($name -like $p) { return $true } }
-      return $false
+    $adapters = Get-NetAdapter -Physical:(-not $IncludeVirtualAdapter) -ErrorAction SilentlyContinue |
+        Where-Object { $_.Status -eq 'Up' }
+    if (-not $adapters -and -not $IncludeVirtualAdapter) {
+        # Fallback: include virtual if no physical adapters are up
+        $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
     }
-  }
-  $adapters
+    if ($NamePattern) {
+        $patterns = $NamePattern
+        $adapters = $adapters | Where-Object {
+            $name = $_.Name
+            foreach ($p in $patterns) { if ($name -like $p) { return $true } }
+            return $false
+        }
+    }
+    $adapters
 }
 
 function Get-Stat {
-  param([string[]]$Names)
-  $raw = Get-NetAdapterStatistics -Name $Names -ErrorAction Stop
-  foreach ($r in $raw) {
-    [pscustomobject]@{
-      Name            = $r.Name
-      RxBytes         = [uint64]$r.ReceivedBytes
-      TxBytes         = [uint64]$r.SentBytes
-      Timestamp       = (Get-Date)
+    param([string[]]$Names)
+    $raw = Get-NetAdapterStatistics -Name $Names -ErrorAction Stop
+    foreach ($r in $raw) {
+        [pscustomobject]@{
+            Name      = $r.Name
+            RxBytes   = [uint64]$r.ReceivedBytes
+            TxBytes   = [uint64]$r.SentBytes
+            Timestamp = (Get-Date)
+        }
     }
-  }
 }
 
 # --- Collect samples ---
@@ -107,98 +107,98 @@ $first = Get-Stat -Names $names
 $allSamples.AddRange($first)
 
 for ($i = 1; $i -lt $sampleCount; $i++) {
-  Start-Sleep -Seconds $IntervalSeconds
-  $s = Get-Stat -Names $names
-  $allSamples.AddRange($s)
+    Start-Sleep -Seconds $IntervalSeconds
+    $s = Get-Stat -Names $names
+    $allSamples.AddRange($s)
 }
 
 # --- Compute per-interval rates and overall stats ---
 $timelineRows = New-Object System.Collections.Generic.List[object]
-$summaryRows  = New-Object System.Collections.Generic.List[object]
+$summaryRows = New-Object System.Collections.Generic.List[object]
 
 foreach ($name in $names) {
-  $samps = $allSamples | Where-Object Name -eq $name | Sort-Object Timestamp
-  if ($samps.Count -lt 2) { continue }
+    $samps = $allSamples | Where-Object Name -EQ $name | Sort-Object Timestamp
+    if ($samps.Count -lt 2) { continue }
 
-  $rxMbpsList = @()
-  $txMbpsList = @()
+    $rxMbpsList = @()
+    $txMbpsList = @()
 
-  for ($i = 1; $i -lt $samps.Count; $i++) {
-    $prev = $samps[$i-1]
-    $curr = $samps[$i]
-    $dt   = ($curr.Timestamp - $prev.Timestamp).TotalSeconds
-    if ($dt -le 0) { continue }
+    for ($i = 1; $i -lt $samps.Count; $i++) {
+        $prev = $samps[$i - 1]
+        $curr = $samps[$i]
+        $dt = ($curr.Timestamp - $prev.Timestamp).TotalSeconds
+        if ($dt -le 0) { continue }
 
-    # Handle 64-bit wrap-around (extremely unlikely in short sessions)
-    $rxDelta = [int64]$curr.RxBytes - [int64]$prev.RxBytes
-    $txDelta = [int64]$curr.TxBytes - [int64]$prev.TxBytes
-    if ($rxDelta -lt 0) { $rxDelta = [int64]([uint64]$curr.RxBytes + [uint64]([uint64]::MaxValue - $prev.RxBytes)) }
-    if ($txDelta -lt 0) { $txDelta = [int64]([uint64]$curr.TxBytes + [uint64]([uint64]::MaxValue - $prev.TxBytes)) }
+        # Handle 64-bit wrap-around (extremely unlikely in short sessions)
+        $rxDelta = [int64]$curr.RxBytes - [int64]$prev.RxBytes
+        $txDelta = [int64]$curr.TxBytes - [int64]$prev.TxBytes
+        if ($rxDelta -lt 0) { $rxDelta = [int64]([uint64]$curr.RxBytes + [uint64]([uint64]::MaxValue - $prev.RxBytes)) }
+        if ($txDelta -lt 0) { $txDelta = [int64]([uint64]$curr.TxBytes + [uint64]([uint64]::MaxValue - $prev.TxBytes)) }
 
-    $rxBps  = [double]$rxDelta / $dt
-    $txBps  = [double]$txDelta / $dt
-    $rxMbps = ($rxBps * 8) / 1MB
-    $txMbps = ($txBps * 8) / 1MB
+        $rxBps = [double]$rxDelta / $dt
+        $txBps = [double]$txDelta / $dt
+        $rxMbps = ($rxBps * 8) / 1MB
+        $txMbps = ($txBps * 8) / 1MB
 
-    $rxMbpsList += $rxMbps
-    $txMbpsList += $txMbps
+        $rxMbpsList += $rxMbps
+        $txMbpsList += $txMbps
 
-    if ($Timeline) {
-      $timelineRows.Add([pscustomobject]@{
-        Name       = $name
-        StartTime  = $prev.Timestamp
-        EndTime    = $curr.Timestamp
-        Interval_s = [math]::Round($dt,3)
-        Rx_Mbps    = [math]::Round($rxMbps,3)
-        Tx_Mbps    = [math]::Round($txMbps,3)
-        Total_Mbps = [math]::Round($rxMbps + $txMbps,3)
-      })
+        if ($Timeline) {
+            $timelineRows.Add([pscustomobject]@{
+                    Name       = $name
+                    StartTime  = $prev.Timestamp
+                    EndTime    = $curr.Timestamp
+                    Interval_s = [math]::Round($dt, 3)
+                    Rx_Mbps    = [math]::Round($rxMbps, 3)
+                    Tx_Mbps    = [math]::Round($txMbps, 3)
+                    Total_Mbps = [math]::Round($rxMbps + $txMbps, 3)
+                })
+        }
     }
-  }
 
-  if ($rxMbpsList.Count -gt 0) {
-    $summaryRows.Add([pscustomobject]@{
-      Name          = $name
-      Samples       = $rxMbpsList.Count
-      Duration_s    = [math]::Round((($samps[-1].Timestamp) - ($samps[0].Timestamp)).TotalSeconds,3)
-      Rx_Avg_Mbps   = [math]::Round(($rxMbpsList | Measure-Object -Average).Average,3)
-      Tx_Avg_Mbps   = [math]::Round(($txMbpsList | Measure-Object -Average).Average,3)
-      Rx_Peak_Mbps  = [math]::Round(($rxMbpsList | Measure-Object -Maximum).Maximum,3)
-      Tx_Peak_Mbps  = [math]::Round(($txMbpsList | Measure-Object -Maximum).Maximum,3)
-      Total_Avg_Mbps= [math]::Round((($rxMbpsList + $txMbpsList) | Measure-Object -Average).Average,3)
-      Total_Peak_Mbps= [math]::Round((($rxMbpsList + $txMbpsList) | Measure-Object -Maximum).Maximum,3)
-    })
-  }
+    if ($rxMbpsList.Count -gt 0) {
+        $summaryRows.Add([pscustomobject]@{
+                Name            = $name
+                Samples         = $rxMbpsList.Count
+                Duration_s      = [math]::Round((($samps[-1].Timestamp) - ($samps[0].Timestamp)).TotalSeconds, 3)
+                Rx_Avg_Mbps     = [math]::Round(($rxMbpsList | Measure-Object -Average).Average, 3)
+                Tx_Avg_Mbps     = [math]::Round(($txMbpsList | Measure-Object -Average).Average, 3)
+                Rx_Peak_Mbps    = [math]::Round(($rxMbpsList | Measure-Object -Maximum).Maximum, 3)
+                Tx_Peak_Mbps    = [math]::Round(($txMbpsList | Measure-Object -Maximum).Maximum, 3)
+                Total_Avg_Mbps  = [math]::Round((($rxMbpsList + $txMbpsList) | Measure-Object -Average).Average, 3)
+                Total_Peak_Mbps = [math]::Round((($rxMbpsList + $txMbpsList) | Measure-Object -Maximum).Maximum, 3)
+            })
+    }
 }
 
 # --- Output ---
 if (-not $summaryRows -and -not $timelineRows) { Write-Warning "No data collected."; return }
 
 switch ($As) {
-  'Json' {
-    $out = [pscustomobject]@{
-      Summary  = $summaryRows
-      Timeline = if ($Timeline) { $timelineRows } else { @() }
+    'Json' {
+        $out = [pscustomobject]@{
+            Summary  = $summaryRows
+            Timeline = if ($Timeline) { $timelineRows } else { @() }
+        }
+        $out | ConvertTo-Json -Depth 5
     }
-    $out | ConvertTo-Json -Depth 5
-  }
-  'Csv' {
-    if (-not $OutCsv) { $OutCsv = Join-Path $PWD 'GetNetBandwidth_Summary.csv' }
-    $summaryRows | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $OutCsv
-    Write-Host "Summary CSV written -> $OutCsv" -ForegroundColor Green
-    if ($Timeline) {
-      $tl = [System.IO.Path]::ChangeExtension($OutCsv, '.timeline.csv')
-      $timelineRows | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $tl
-      Write-Host "Timeline CSV written -> $tl" -ForegroundColor Green
+    'Csv' {
+        if (-not $OutCsv) { $OutCsv = Join-Path $PWD 'GetNetBandwidth_Summary.csv' }
+        $summaryRows | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $OutCsv
+        Write-Host "Summary CSV written -> $OutCsv" -ForegroundColor Green
+        if ($Timeline) {
+            $tl = [System.IO.Path]::ChangeExtension($OutCsv, '.timeline.csv')
+            $timelineRows | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $tl
+            Write-Host "Timeline CSV written -> $tl" -ForegroundColor Green
+        }
     }
-  }
-  default {
-    $summaryRows | Sort-Object -Property Total_Avg_Mbps -Descending |
-      Format-Table Name,Duration_s,Samples,Rx_Avg_Mbps,Tx_Avg_Mbps,Total_Avg_Mbps,Rx_Peak_Mbps,Tx_Peak_Mbps,Total_Peak_Mbps -Auto
-    if ($Timeline) {
-      "`nTimeline:" | Out-Host
-      $timelineRows | Format-Table Name,StartTime,EndTime,Interval_s,Rx_Mbps,Tx_Mbps,Total_Mbps -Auto
+    default {
+        $summaryRows | Sort-Object -Property Total_Avg_Mbps -Descending |
+            Format-Table Name, Duration_s, Samples, Rx_Avg_Mbps, Tx_Avg_Mbps, Total_Avg_Mbps, Rx_Peak_Mbps, Tx_Peak_Mbps, Total_Peak_Mbps -Auto
+        if ($Timeline) {
+            "`nTimeline:" | Out-Host
+            $timelineRows | Format-Table Name, StartTime, EndTime, Interval_s, Rx_Mbps, Tx_Mbps, Total_Mbps -Auto
+        }
     }
-  }
 }
 Write-Host "Done." -ForegroundColor Green

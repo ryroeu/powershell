@@ -12,7 +12,7 @@ param(
 )
 
 $administratorNames = @(Get-LocalGroupMember -SID 'S-1-5-32-544' -ErrorAction Stop |
-    ForEach-Object { ($_.Name -split '\\')[-1] })
+        ForEach-Object { ($_.Name -split '\\')[-1] })
 
 foreach ($user in Get-LocalUser | Where-Object Enabled) {
     if ($user.Name -in $administratorNames) {

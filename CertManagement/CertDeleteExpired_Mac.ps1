@@ -70,13 +70,13 @@ foreach ($keychainPath in $Keychain) {
         }
 
         $results.Add([pscustomobject]@{
-            Keychain  = $keychainPath
-            Subject   = $fields.subject
-            Issuer    = $fields.issuer
-            Thumbprint = $thumbprint
-            NotAfter  = $notAfter.LocalDateTime
-            Deleted   = $deleted
-        })
+                Keychain   = $keychainPath
+                Subject    = $fields.subject
+                Issuer     = $fields.issuer
+                Thumbprint = $thumbprint
+                NotAfter   = $notAfter.LocalDateTime
+                Deleted    = $deleted
+            })
     }
 }
 

@@ -95,9 +95,9 @@ if ($Scan) {
 }
 
 [pscustomobject]@{
-    ComputerName      = $env:COMPUTERNAME
-    CacheBackups      = $backups.ToArray()
-    WinsockReset      = $ResetWinsock.IsPresent
-    WinHttpProxyReset = $ResetWinHttpProxy.IsPresent
+    ComputerName       = $env:COMPUTERNAME
+    CacheBackups       = $backups.ToArray()
+    WinsockReset       = $ResetWinsock.IsPresent
+    WinHttpProxyReset  = $ResetWinHttpProxy.IsPresent
     RestartRecommended = $ResetWinsock.IsPresent
 }

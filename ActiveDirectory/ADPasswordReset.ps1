@@ -48,9 +48,9 @@ if ($PSCmdlet.ShouldProcess($UserName, 'Reset Active Directory password')) {
     Set-ADUser -Identity $UserName -ChangePasswordAtLogon $ChangePasswordAtLogon -ErrorAction Stop
 
     [pscustomobject]@{
-        UserName              = $UserName
-        PasswordReset         = $true
-        ChangeAtNextLogon     = $ChangePasswordAtLogon
-        GeneratedPassword     = $plainTextPassword
+        UserName          = $UserName
+        PasswordReset     = $true
+        ChangeAtNextLogon = $ChangePasswordAtLogon
+        GeneratedPassword = $plainTextPassword
     }
 }

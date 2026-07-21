@@ -48,21 +48,21 @@ foreach ($category in $categories) {
 $report = foreach ($assignment in $assignments.Values) {
     $user = Get-ADUser -Identity $assignment.User -Properties PasswordExpired, PasswordNeverExpires, LastLogonDate
     [pscustomobject]@{
-        Category            = $assignment.Category
-        SamAccountName      = $user.SamAccountName
-        Enabled             = $user.Enabled
-        PasswordExpired     = $user.PasswordExpired
+        Category             = $assignment.Category
+        SamAccountName       = $user.SamAccountName
+        Enabled              = $user.Enabled
+        PasswordExpired      = $user.PasswordExpired
         PasswordNeverExpires = $user.PasswordNeverExpires
-        LastLogonDate       = $user.LastLogonDate
-        DistinguishedName   = $user.DistinguishedName
-        TargetPath          = $assignment.TargetPath
+        LastLogonDate        = $user.LastLogonDate
+        DistinguishedName    = $user.DistinguishedName
+        TargetPath           = $assignment.TargetPath
     }
 }
 
 if ($ExportDirectory) {
     New-Item -ItemType Directory -Path $ExportDirectory -Force | Out-Null
     foreach ($categoryName in 'Inactive', 'Expired', 'Disabled') {
-        $report | Where-Object Category -eq $categoryName |
+        $report | Where-Object Category -EQ $categoryName |
             Export-Csv -LiteralPath (Join-Path $ExportDirectory "$categoryName`Users.csv") -NoTypeInformation -Encoding utf8NoBOM
     }
 }

@@ -21,25 +21,25 @@ $bios = Get-CimInstance -ClassName Win32_BIOS
 $processors = @(Get-CimInstance -ClassName Win32_Processor)
 
 $result = [ordered]@{
-    ComputerName       = $computerSystem.Name
-    LoggedOnUser       = $computerSystem.UserName
-    Manufacturer       = $computerSystem.Manufacturer
-    Model              = $computerSystem.Model
-    OperatingSystem    = $operatingSystem.Caption
-    OSVersion          = $operatingSystem.Version
-    OSBuild             = $operatingSystem.BuildNumber
-    LastBootTime       = $operatingSystem.LastBootUpTime
-    BiosManufacturer   = $bios.Manufacturer
-    BiosVersion        = $bios.SMBIOSBIOSVersion
-    BiosSerialNumber   = $bios.SerialNumber
-    Processor          = $processors | Select-Object Name, MaxClockSpeed, NumberOfCores, NumberOfLogicalProcessors
-    Disk               = @(Get-Disk | Select-Object Number, FriendlyName, PartitionStyle, OperationalStatus, HealthStatus, Size)
-    Volume             = @(Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, HealthStatus, Size, SizeRemaining)
-    NetworkAdapter     = @(Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress)
-    NetworkProfile     = @(Get-NetConnectionProfile | Select-Object Name, InterfaceAlias, IPv4Connectivity, IPv6Connectivity, NetworkCategory)
-    IPAddress          = @(Get-NetIPAddress | Select-Object InterfaceAlias, AddressFamily, IPAddress, PrefixLength)
-    DnsServer          = @(Get-DnsClientServerAddress | Select-Object InterfaceAlias, AddressFamily, ServerAddresses)
-    TopProcessByCpu    = @(Get-Process | Sort-Object CPU -Descending | Select-Object -First $TopProcessCount Name, Id, CPU, WorkingSet64)
+    ComputerName     = $computerSystem.Name
+    LoggedOnUser     = $computerSystem.UserName
+    Manufacturer     = $computerSystem.Manufacturer
+    Model            = $computerSystem.Model
+    OperatingSystem  = $operatingSystem.Caption
+    OSVersion        = $operatingSystem.Version
+    OSBuild          = $operatingSystem.BuildNumber
+    LastBootTime     = $operatingSystem.LastBootUpTime
+    BiosManufacturer = $bios.Manufacturer
+    BiosVersion      = $bios.SMBIOSBIOSVersion
+    BiosSerialNumber = $bios.SerialNumber
+    Processor        = $processors | Select-Object Name, MaxClockSpeed, NumberOfCores, NumberOfLogicalProcessors
+    Disk             = @(Get-Disk | Select-Object Number, FriendlyName, PartitionStyle, OperationalStatus, HealthStatus, Size)
+    Volume           = @(Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, HealthStatus, Size, SizeRemaining)
+    NetworkAdapter   = @(Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress)
+    NetworkProfile   = @(Get-NetConnectionProfile | Select-Object Name, InterfaceAlias, IPv4Connectivity, IPv6Connectivity, NetworkCategory)
+    IPAddress        = @(Get-NetIPAddress | Select-Object InterfaceAlias, AddressFamily, IPAddress, PrefixLength)
+    DnsServer        = @(Get-DnsClientServerAddress | Select-Object InterfaceAlias, AddressFamily, ServerAddresses)
+    TopProcessByCpu  = @(Get-Process | Sort-Object CPU -Descending | Select-Object -First $TopProcessCount Name, Id, CPU, WorkingSet64)
 }
 
 if ($IncludeLicensing) {

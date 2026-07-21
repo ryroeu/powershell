@@ -65,7 +65,7 @@ switch ($PSCmdlet.ParameterSetName) {
 Connect-SPOService @connectParameters
 
 if (-not $Action) {
-    $menu = [ordered]@{ '1'='ListNoAccess'; '2'='ListReadOnly'; '3'='SetNoAccess'; '4'='SetReadOnly'; '5'='Unlock' }
+    $menu = [ordered]@{ '1' = 'ListNoAccess'; '2' = 'ListReadOnly'; '3' = 'SetNoAccess'; '4' = 'SetReadOnly'; '5' = 'Unlock' }
     $menu.GetEnumerator() | ForEach-Object { '{0}. {1}' -f $_.Key, $_.Value }
     $selection = Read-Host 'Choose an action [1-5]'
     if (-not $menu.Contains($selection)) { throw 'Invalid menu selection.' }
@@ -75,7 +75,7 @@ if (-not $Action) {
 if ($Action -like 'List*') {
     $lockState = if ($Action -eq 'ListNoAccess') { 'NoAccess' } else { 'ReadOnly' }
     Get-SPOSite -Limit All |
-        Where-Object LockState -eq $lockState |
+        Where-Object LockState -EQ $lockState |
         Select-Object Url, Title, Owner, LockState
     return
 }

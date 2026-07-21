@@ -14,6 +14,6 @@ if ($parent -and -not (Test-Path -LiteralPath $parent)) {
 }
 
 Get-Service |
-    Where-Object Status -eq 'Running' |
+    Where-Object Status -EQ 'Running' |
     Select-Object Name, DisplayName, Status, StartType |
     Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8

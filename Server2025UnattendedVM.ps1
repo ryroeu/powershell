@@ -157,11 +157,12 @@ $unattendXml = @"
 </unattend>
 "@
 
-$null = New-Item -ItemType Directory -Path $OutputDirectory -Force
 $unattendPath = Join-Path $OutputDirectory 'Autounattend.xml'
-if ($PSCmdlet.ShouldProcess($unattendPath, 'Write unattended setup answer file')) {
-    $unattendXml | Set-Content -LiteralPath $unattendPath -Encoding utf8
+if (-not $PSCmdlet.ShouldProcess($unattendPath, 'Write unattended setup answer file')) {
+    return
 }
+$null = New-Item -ItemType Directory -Path $OutputDirectory -Force
+$unattendXml | Set-Content -LiteralPath $unattendPath -Encoding utf8
 
 if (-not $BuildISO) {
     Get-Item -LiteralPath $unattendPath

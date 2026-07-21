@@ -21,7 +21,7 @@ $reference = Get-Item -LiteralPath $ReferencePath -ErrorAction Stop
 $referenceHash = (Get-FileHash -LiteralPath $reference.FullName -Algorithm $Algorithm).Hash
 
 Get-ChildItem -LiteralPath $SearchPath -File -Recurse:$Recurse |
-    Where-Object FullName -ne $reference.FullName |
+    Where-Object FullName -NE $reference.FullName |
     ForEach-Object {
         $candidateHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm $Algorithm).Hash
         if ($candidateHash -eq $referenceHash) {

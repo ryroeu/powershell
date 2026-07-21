@@ -7,5 +7,5 @@
 param()
 
 Get-CimInstance -ClassName Win32_PnPSignedDriver |
-    Where-Object IsSigned -eq $false |
+    Where-Object IsSigned -EQ $false |
     Select-Object DeviceName, Manufacturer, DriverVersion, DriverDate

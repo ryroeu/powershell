@@ -23,7 +23,7 @@ $processes = if ($PSCmdlet.ParameterSetName -eq 'ById') {
     @(Get-Process -Id $ProcessId -ErrorAction Stop)
 }
 else {
-    @(Get-Process | Where-Object ProcessName -like $ProcessName)
+    @(Get-Process | Where-Object ProcessName -Like $ProcessName)
 }
 if (-not $processes) { throw 'No matching processes were found.' }
 

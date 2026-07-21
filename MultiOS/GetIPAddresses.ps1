@@ -24,12 +24,12 @@ foreach ($interface in [Net.NetworkInformation.NetworkInterface]::GetAllNetworkI
         if ($AddressFamily -ne 'Both' -and $AddressFamily -ne $family) { continue }
 
         [pscustomobject]@{
-            InterfaceName      = $interface.Name
-            InterfaceType      = $interface.NetworkInterfaceType
-            OperationalStatus  = $interface.OperationalStatus
-            AddressFamily      = $family
-            IPAddress          = $addressInfo.Address.ToString()
-            PrefixLength       = $addressInfo.PrefixLength
+            InterfaceName     = $interface.Name
+            InterfaceType     = $interface.NetworkInterfaceType
+            OperationalStatus = $interface.OperationalStatus
+            AddressFamily     = $family
+            IPAddress         = $addressInfo.Address.ToString()
+            PrefixLength      = $addressInfo.PrefixLength
         }
     }
 }

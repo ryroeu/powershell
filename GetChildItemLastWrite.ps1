@@ -14,4 +14,4 @@ param(
 )
 
 Get-ChildItem -LiteralPath $Path -Recurse:$Recurse |
-    Where-Object LastWriteTime -gt $LastWrite
+    Where-Object LastWriteTime -GT $LastWrite

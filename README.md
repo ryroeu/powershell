@@ -34,13 +34,44 @@ The root-level scripts cover several broader areas:
 
 Requirements vary by script:
 
-- Most Windows administration scripts are intended for Windows PowerShell 5.1 or PowerShell 7 and may require an elevated session.
-- Scripts in [`MultiOS/`](MultiOS/) generally use PowerShell 7 for Windows, Linux, and macOS support.
+- The repository is maintained and validated against the current PowerShell 7 LTS release (PowerShell 7.6.3 at the time of this audit).
+- Windows administration scripts may require an elevated session and Windows-only modules, roles, or compatibility components.
+- Scripts in [`MultiOS/`](MultiOS/) use PowerShell 7 for Windows, Linux, and macOS support.
 - Some scripts require Windows roles or tools such as Active Directory Domain Services, DNS Server, Hyper-V, RSAT, or SQL Server tooling.
 - Microsoft 365 scripts may require modules such as Microsoft Graph, ExchangeOnlineManagement, PnP.PowerShell, or PartnerCenter, along with the appropriate tenant permissions.
 - Certificate scripts for Linux or macOS may rely on native tools such as `openssl` or `security`.
 
 Review the comment-based help and source of an individual script before running it. Compatibility is documented per script where available.
+
+## Repository validation
+
+Install the current PSScriptAnalyzer release, then run the repository checks from its root:
+
+```powershell
+Install-PSResource PSScriptAnalyzer -Scope CurrentUser
+
+# Syntax: parse every script without executing it.
+$parseErrors = Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+    $tokens = $null
+    $errors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile(
+        $_.FullName,
+        [ref]$tokens,
+        [ref]$errors
+    )
+    $errors
+}
+if ($parseErrors) { $parseErrors; throw 'PowerShell parser validation failed.' }
+
+# Correctness and style rules for this script collection.
+Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+
+# Formatting check (reports files whose current text differs from Invoke-Formatter output).
+Get-ChildItem -Recurse -Filter *.ps1 | Where-Object {
+    $content = Get-Content -LiteralPath $_.FullName -Raw
+    (Invoke-Formatter -ScriptDefinition $content) -cne $content
+}
+```
 
 ## Getting started
 

@@ -64,9 +64,9 @@ process {
                     $neighbors = $neighbors | Where-Object { $_.IPAddress -in $IPAddress.IPAddressToString }
                 }
                 if (-not $IncludePermanent) {
-                    $neighbors = $neighbors | Where-Object State -ne 'Permanent'
+                    $neighbors = $neighbors | Where-Object State -NE 'Permanent'
                 }
-                $neighbors = $neighbors | Where-Object State -in 'Reachable', 'Stale', 'Delay', 'Probe', 'Unknown', 'Unreachable', 'Incomplete'
+                $neighbors = $neighbors | Where-Object State -In 'Reachable', 'Stale', 'Delay', 'Probe', 'Unknown', 'Unreachable', 'Incomplete'
 
                 foreach ($neighbor in $neighbors | Sort-Object InterfaceIndex, IPAddress -Unique) {
                     $target = '{0}: {1} ({2})' -f $computer, $neighbor.IPAddress, $neighbor.InterfaceAlias
@@ -77,9 +77,9 @@ process {
                     try {
                         $removeParameters = @{
                             InterfaceIndex = $neighbor.InterfaceIndex
-                            IPAddress       = $neighbor.IPAddress
-                            Confirm         = $false
-                            ErrorAction     = 'Stop'
+                            IPAddress      = $neighbor.IPAddress
+                            Confirm        = $false
+                            ErrorAction    = 'Stop'
                         }
                         if ($session) {
                             $removeParameters.CimSession = $session
@@ -95,10 +95,10 @@ process {
             }
 
             $results.Add([pscustomobject]@{
-                ComputerName = $computer
-                Cleared      = $cleared
-                Failed       = $failed
-            })
+                    ComputerName = $computer
+                    Cleared      = $cleared
+                    Failed       = $failed
+                })
         }
         finally {
             if ($session) {

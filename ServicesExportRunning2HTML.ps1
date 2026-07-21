@@ -16,13 +16,13 @@ if (-not $IsWindows) { throw 'This script requires Windows.' }
 
 $isLocal = $ComputerName -in '.', 'localhost', $env:COMPUTERNAME
 if ($isLocal) {
-    $services = Get-Service | Where-Object Status -eq 'Running'
+    $services = Get-Service | Where-Object Status -EQ 'Running'
 }
 else {
     $parameters = @{ ComputerName = $ComputerName; ErrorAction = 'Stop' }
     if ($Credential) { $parameters.Credential = $Credential }
     $services = Invoke-Command @parameters -ScriptBlock {
-        Get-Service | Where-Object Status -eq 'Running'
+        Get-Service | Where-Object Status -EQ 'Running'
     }
 }
 

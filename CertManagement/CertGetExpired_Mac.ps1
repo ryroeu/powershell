@@ -1,81 +1,44 @@
-﻿<#
+<#
 .SYNOPSIS
-Finds expired certificates on macOS using the 'security' command.
-Requires PowerShell 7+.
+    Lists expired certificates from macOS keychains.
 #>
 
-# Get the current date in UTC for comparison
-$CurrentDateUTC = (Get-Date).ToUniversalTime()
-$AllExpiredCerts = [System.Collections.Generic.List[PSObject]]::new()
+#Requires -Version 7.0
 
-Write-Host "Querying macOS Keychains for certificates..." -ForegroundColor Yellow
+[CmdletBinding()]
+param(
+    [string[]]$Keychain,
 
-# Execute security command to dump all certificates in PEM format
-try {
-    # -a = all matching certs, -p = output PEM, -Z = include SHA256 hash (useful for thumbprint)
-    $securityOutput = security find-certificate -a -p -Z
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to execute 'security find-certificate'. Exit code: $LASTEXITCODE"
-        exit 1
-    }
-} catch {
-    Write-Error "Error executing 'security find-certificate': $($_.Exception.Message)"
-    exit 1
-}
+    [datetime]$AsOf = (Get-Date)
+)
 
-# Split the output into individual PEM certificate blocks using regex
-# This looks for the BEGIN/END markers and captures everything in between, including the markers.
-$pemBlocks = ($securityOutput | Out-String) -split '(?=-----BEGIN CERTIFICATE-----)' | Where-Object { $_ -match '-----BEGIN CERTIFICATE-----' }
+if (-not $IsMacOS) { throw 'This script requires macOS.' }
+if (-not (Get-Command security -CommandType Application -ErrorAction SilentlyContinue)) { throw "'security' was not found." }
 
-Write-Host "Found $($pemBlocks.Count) potential certificate blocks. Analyzing..." -ForegroundColor Cyan
+$keychains = if ($Keychain) { $Keychain } else { @($null) }
+foreach ($keychainPath in $keychains) {
+    $arguments = @('find-certificate', '-a', '-p')
+    if ($keychainPath) { $arguments += $keychainPath }
+    $pemOutput = (& security @arguments 2>$null) -join "`n"
+    if ($LASTEXITCODE -ne 0) { throw "Could not read keychain '$keychainPath'." }
 
-$count = 0
-foreach ($pemBlock in $pemBlocks) {
-    $count++
-    Write-Progress -Activity "Analyzing Certificates" -Status "Processing block $count of $($pemBlocks.Count)" -PercentComplete (($count / $pemBlocks.Count) * 100)
-
-    $cert = $null
-    $certBytes = [System.Text.Encoding]::UTF8.GetBytes($pemBlock.Trim())
-
-    try {
-        # Create an X509Certificate2 object from the PEM data bytes
-        # Use .NET directly as Import-Certificate might not handle raw PEM strings well cross-platform
-        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certBytes)
-
-        # Compare expiry date (convert to UTC) with current date (already UTC)
-        if ($cert.NotAfter.ToUniversalTime() -lt $CurrentDateUTC) {
-            $AllExpiredCerts.Add(
-                [PSCustomObject]@{
-                    Subject    = $cert.Subject
-                    Thumbprint = $cert.Thumbprint # SHA1 Hash
-                    # SHA256 = $cert.GetCertHashString('SHA256') # Requires newer .NET method if available
-                    NotAfter   = $cert.NotAfter
-                    Issuer     = $cert.Issuer
-                    Source     = "macOS Keychain (parsed)"
+    foreach ($certificateMatch in [regex]::Matches($pemOutput, '(?s)-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----')) {
+        $certificate = $null
+        try {
+            $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certificateMatch.Value)
+            if ($certificate.NotAfter -lt $AsOf) {
+                [pscustomobject]@{
+                    Keychain   = if ($keychainPath) { $keychainPath } else { 'Default keychains' }
+                    Subject    = $certificate.Subject
+                    Issuer     = $certificate.Issuer
+                    Thumbprint = $certificate.Thumbprint
+                    NotBefore  = $certificate.NotBefore
+                    NotAfter   = $certificate.NotAfter
                 }
-            )
+            }
         }
-    } catch {
-        Write-Verbose "Could not process certificate block ${count}: $($_.Exception.Message)"
-    } finally {
-         # Clean up the cert object if created
-        if ($null -ne $cert) {
-            $cert.Dispose()
+        finally {
+            if ($certificate) { $certificate.Dispose() }
         }
     }
-}
-Write-Progress -Activity "Analyzing Certificates" -Completed
-
-# --- Output Results ---
-if ($AllExpiredCerts.Count -gt 0) {
-    Write-Host "`nFound $($AllExpiredCerts.Count) expired certificate(s):" -ForegroundColor Red
-    $AllExpiredCerts | Format-Table -AutoSize -Wrap
-} else {
-    Write-Host "`nNo expired certificates found in the Keychains via 'security' command." -ForegroundColor Green
-}
-
-# --- End ---
-# Keep the window open if run directly
-if ($Host.Name -eq 'ConsoleHost') {
-   Read-Host -Prompt "Press Enter to exit"
 }

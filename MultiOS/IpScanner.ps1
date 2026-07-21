@@ -1,103 +1,101 @@
-﻿<#
+<#
 .SYNOPSIS
-  Scans a local network subnet and displays IP addresses that are actively responding to a ping.
-  This script is designed to be cross-platform and works on Windows, macOS, and Linux
-  with PowerShell Core (version 6.0 or later).
-
-.DESCRIPTION
-  This script first determines the local machine's IP address and uses that to
-  find the local network subnet. It then generates a range of IP addresses
-  (from .1 to .254) and uses Test-Connection to send a single ping packet to each.
-  If an IP address responds, it is considered active and is displayed to the console.
-
-  The script uses a multithreaded approach with a "RunspacePool" to perform pings
-  concurrently, which significantly speeds up the scanning process. This is much
-  more efficient than pinging each IP address sequentially.
+    Scans an IPv4 CIDR range for hosts that answer ICMP echo requests.
 #>
 
-# Requires PowerShell 6.0 or later for cross-platform support and features like ForEach-Object -Parallel.
-# Check for PowerShell version and exit if it's too old.
-if ($PSVersionTable.PSVersion.Major -lt 6) {
-    Write-Host "This script requires PowerShell 6.0 or later. Please install PowerShell Core." -ForegroundColor Red
-    exit
+#Requires -Version 7.0
+
+[CmdletBinding()]
+param(
+    [string]$Cidr,
+
+    [ValidateRange(1, 65536)]
+    [int]$MaxHosts = 1024,
+
+    [ValidateRange(1, 1024)]
+    [int]$ThrottleLimit = 64,
+
+    [ValidateRange(1, 10000)]
+    [int]$TimeoutMilliseconds = 500,
+
+    [switch]$ResolveDns
+)
+
+function ConvertTo-UInt32Address {
+    param([Parameter(Mandatory)][ipaddress]$Address)
+    if ($Address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) { throw "'$Address' is not IPv4." }
+    $bytes = $Address.GetAddressBytes()
+    if ([BitConverter]::IsLittleEndian) { [Array]::Reverse($bytes) }
+    [BitConverter]::ToUInt32($bytes, 0)
 }
 
-function Find-Network {
-    # Determine the local network adapter's IPv4 address.
-    # Get-NetIPAddress is a Windows-specific cmdlet. Using if ($IsWindows) is necessary here.
-    # On macOS and Linux, we use 'ip route' and standard string manipulation to get the IP.
-    Write-Host "Determining local network IP address..." -ForegroundColor Green
-    $localIP = ""
+function ConvertTo-IPv4Address {
+    param([Parameter(Mandatory)][uint32]$Value)
+    $bytes = [BitConverter]::GetBytes($Value)
+    if ([BitConverter]::IsLittleEndian) { [Array]::Reverse($bytes) }
+    [ipaddress]::new($bytes)
+}
 
-    if ($IsWindows) {
-        $localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch "127.0.0.1|169.254." } | Select-Object -ExpandProperty IPAddress)
-        if (-not $localIP) {
-            Write-Host "Could not find a valid IPv4 address on a network adapter." -ForegroundColor Red
-            return
-        }
-    }
-    elseif ($IsLinux) {
-        $localIP = (ip route | Where-Object { $_ -like '*src*' } | Select-Object -First 1).Split()[8]
-    }
-    elseif ($IsMacOs) {
-        # macOS uses ifconfig, which is deprecated but still works for this purpose.
-        $localIP = (ifconfig | Where-Object { $_ -like '*inet*' -and $_ -notlike '*127.0.0.1*' -and $_ -notlike '*inet6*' } | Select-Object -First 1).Trim().Split()[1]
-    }
+if (-not $Cidr) {
+    $addressInfo = [Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
+        Where-Object { $_.OperationalStatus -eq 'Up' -and $_.NetworkInterfaceType -ne 'Loopback' } |
+        ForEach-Object { $_.GetIPProperties().UnicastAddresses } |
+        Where-Object { $_.Address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetwork -and -not $_.Address.IsIPv6LinkLocal } |
+        Select-Object -First 1
+    if (-not $addressInfo) { throw 'No active non-loopback IPv4 address was found.' }
+    $Cidr = "$($addressInfo.Address)/$($addressInfo.PrefixLength)"
+}
 
-    if (-not $localIP) {
-        Write-Host "Could not determine local IP address. Please check your network connection." -ForegroundColor Red
-        return
-    }
+if ($Cidr -notmatch '^(?<Address>[^/]+)/(?<Prefix>\d{1,2})$') { throw "Invalid CIDR '$Cidr'." }
+$address = [ipaddress]$Matches.Address
+$prefixLength = [int]$Matches.Prefix
+if ($address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $prefixLength -notin 0..32) {
+    throw "Invalid IPv4 CIDR '$Cidr'."
+}
 
-    Write-Host "Found local IP: $localIP" -ForegroundColor Yellow
+$addressValue = ConvertTo-UInt32Address $address
+$mask = if ($prefixLength -eq 0) { [uint32]0 } else { [uint32]([uint32]::MaxValue -shl (32 - $prefixLength)) }
+$networkValue = $addressValue -band $mask
+$addressCount = [uint64][Math]::Pow(2, 32 - $prefixLength)
+$firstValue = [uint64]$networkValue
+$lastValue = $firstValue + $addressCount - 1
+if ($prefixLength -le 30) {
+    $firstValue++
+    $lastValue--
+}
+$hostCount = $lastValue - $firstValue + 1
+if ($hostCount -gt $MaxHosts) {
+    throw "CIDR '$Cidr' contains $hostCount usable addresses, exceeding -MaxHosts $MaxHosts."
+}
 
-    # Extract the subnet prefix (e.g., "192.168.1").
-    $subnetPrefix = ($localIP.Split('.') | Select-Object -First 3) -join '.'
-    Write-Host "Scanning subnet: $subnetPrefix.1 to $subnetPrefix.254" -ForegroundColor Yellow
+$targets = for ($value = $firstValue; $value -le $lastValue; $value++) {
+    (ConvertTo-IPv4Address ([uint32]$value)).IPAddressToString
+}
 
-    # Create a list of all possible IP addresses to scan.
-    $ipAddressesToScan = @()
-    for ($i = 1; $i -le 254; $i++) {
-        $ipAddressesToScan += "$subnetPrefix.$i"
-    }
-
-    Write-Host "Scanning for active hosts..." -ForegroundColor Green
-
-    # Use Test-Connection with parallel processing to improve performance.
-    # The output of the parallel block is collected directly in $activeHosts.
-    $activeHosts = $ipAddressesToScan | ForEach-Object -ThrottleLimit 10 -Parallel {
-        $ip = $_
+$targets | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
+    $target = $_
+    $ping = [Net.NetworkInformation.Ping]::new()
+    try {
         try {
-            $testResult = Test-Connection -TargetName $ip -Count 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
-            if ($testResult.Status -eq "Success") {
-                [PSCustomObject]@{
-                    IP = $ip
-                    Hostname = $testResult.IPV4Address.HostName
-                }
-            }
+            $reply = $ping.Send($target, $using:TimeoutMilliseconds)
         }
         catch {
-            Write-Verbose "Ping to '$ip' failed: $($_.Exception.Message)"
+            Write-Verbose "Ping failed for $target`: $($_.Exception.Message)"
+            return
+        }
+        if ($reply.Status -ne [Net.NetworkInformation.IPStatus]::Success) { return }
+        $hostName = if ($using:ResolveDns) {
+            try { [Net.Dns]::GetHostEntry($target).HostName } catch { $null }
+        }
+        else { $null }
+        [pscustomobject]@{
+            IPAddress       = $target
+            HostName        = $hostName
+            RoundtripTimeMs = $reply.RoundtripTime
+            Status          = $reply.Status
         }
     }
-
-    Write-Host ""
-    Write-Host "Active hosts found:" -ForegroundColor Green
-    Write-Host "--------------------" -ForegroundColor Green
-
-    # Display the found IP addresses and hostnames.
-    if ($activeHosts.Count -gt 0) {
-        $activeHosts | ForEach-Object {
-            Write-Host "IP: $($_.IP)"
-            Write-Host "Hostname: $($_.Hostname)"
-            Write-Host ""
-        }
-        Write-Host "Scan complete. Found $($activeHosts.Count) active hosts." -ForegroundColor Green
+    finally {
+        $ping.Dispose()
     }
-    else {
-        Write-Host "No active hosts found on the network." -ForegroundColor Red
-    }
-}
-
-# Run the function
-Find-Network
+} | Sort-Object { [version]$_.IPAddress }

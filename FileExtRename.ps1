@@ -20,5 +20,5 @@ $from = if ($FromExtension.StartsWith('.')) { $FromExtension } else { ".$FromExt
 $to = if ($ToExtension.StartsWith('.')) { $ToExtension } else { ".$ToExtension" }
 
 Get-ChildItem -LiteralPath $Path -File |
-    Where-Object Extension -eq $from |
+    Where-Object Extension -EQ $from |
     Rename-Item -NewName { [IO.Path]::ChangeExtension($_.Name, $to) } -WhatIf:$WhatIfPreference

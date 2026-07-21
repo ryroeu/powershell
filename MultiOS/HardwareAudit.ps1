@@ -65,20 +65,28 @@ elseif ($IsLinux) {
     $availableMemoryGB = [Math]::Round($memoryInfo.MemAvailable / 1MB, 2)
 }
 elseif ($IsMacOS) {
-    $processorName = (& /usr/sbin/sysctl -n machdep.cpu.brand_string 2>$null).Trim()
-    if (-not $processorName) { $processorName = (& /usr/sbin/sysctl -n hw.model).Trim() }
+    $processorNameOutput = @(& /usr/sbin/sysctl -n machdep.cpu.brand_string 2>$null)
+    if ($processorNameOutput) { $processorName = ($processorNameOutput -join ' ').Trim() }
+    if (-not $processorName) {
+        $modelOutput = @(& /usr/sbin/sysctl -n hw.model 2>$null)
+        if ($modelOutput) { $processorName = ($modelOutput -join ' ').Trim() }
+    }
+    if (-not $processorName) { $processorName = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString() }
     $processorManufacturer = if ($processorName -match 'Apple') { 'Apple' } elseif ($processorName -match 'Intel') { 'Intel' } else { $null }
-    $physicalCoreCount = [int](& /usr/sbin/sysctl -n hw.physicalcpu)
-    $l2CacheMB = [Math]::Round([double](& /usr/sbin/sysctl -n hw.l2cachesize) / 1MB, 2)
-    $l3Bytes = & /usr/sbin/sysctl -n hw.l3cachesize 2>$null
-    if ($l3Bytes) { $l3CacheMB = [Math]::Round([double]$l3Bytes / 1MB, 2) }
-    $totalMemoryGB = [Math]::Round([double](& /usr/sbin/sysctl -n hw.memsize) / 1GB, 2)
+    $physicalCoreOutput = @(& /usr/sbin/sysctl -n hw.physicalcpu 2>$null)
+    $physicalCoreCount = if ($physicalCoreOutput) { [int]$physicalCoreOutput[0] } else { [Environment]::ProcessorCount }
+    $l2Bytes = @(& /usr/sbin/sysctl -n hw.l2cachesize 2>$null)
+    if ($l2Bytes) { $l2CacheMB = [Math]::Round([double]$l2Bytes[0] / 1MB, 2) }
+    $l3Bytes = @(& /usr/sbin/sysctl -n hw.l3cachesize 2>$null)
+    if ($l3Bytes) { $l3CacheMB = [Math]::Round([double]$l3Bytes[0] / 1MB, 2) }
+    $memoryBytes = @(& /usr/sbin/sysctl -n hw.memsize 2>$null)
+    if ($memoryBytes) { $totalMemoryGB = [Math]::Round([double]$memoryBytes[0] / 1GB, 2) }
 
     $vmStatistics = @(& /usr/bin/vm_stat)
     $pageSize = if ($vmStatistics[0] -match 'page size of (?<Size>\d+) bytes') { [double]$Matches.Size } else { 4096 }
     $availablePages = 0
     foreach ($name in 'Pages free', 'Pages inactive', 'Pages speculative') {
-        $line = $vmStatistics | Where-Object { $_ -like "$name:*" } | Select-Object -First 1
+        $line = $vmStatistics | Where-Object { $_ -like "${name}:*" } | Select-Object -First 1
         if ($line -match ':\s*(?<Pages>\d+)') { $availablePages += [double]$Matches.Pages }
     }
     $availableMemoryGB = [Math]::Round(($availablePages * $pageSize) / 1GB, 2)

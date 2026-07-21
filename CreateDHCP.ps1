@@ -60,11 +60,11 @@ foreach ($definition in $Scope) {
 
     $scopeId = ([ipaddress]$definition.StartRange).IPAddressToString
     $existing = Get-DhcpServerv4Scope -ComputerName $ComputerName -ErrorAction SilentlyContinue |
-        Where-Object Name -eq $definition.Name
+        Where-Object Name -EQ $definition.Name
     if (-not $existing -and $PSCmdlet.ShouldProcess("$ComputerName :: $($definition.Name)", 'Create DHCP scope')) {
         Add-DhcpServerv4Scope -ComputerName $ComputerName -Name $definition.Name -StartRange $definition.StartRange -EndRange $definition.EndRange -SubnetMask $definition.SubnetMask -State Active
         $existing = Get-DhcpServerv4Scope -ComputerName $ComputerName -ErrorAction Stop |
-            Where-Object Name -eq $definition.Name
+            Where-Object Name -EQ $definition.Name
     }
     if ($existing) {
         $scopeId = $existing.ScopeId

@@ -68,10 +68,10 @@ if (-not [string]::IsNullOrEmpty($PowerShellHome)) {
     $pluginDllPath = Join-Path $TargetPsHome "pwrshplugin.dll"
 
     if (-not (Test-Path $pwshExePath -PathType Leaf)) {
-         Write-Error "Could not find 'pwsh.exe' in the specified PowerShellHome: '$TargetPsHome'." -ErrorAction Stop
+        Write-Error "Could not find 'pwsh.exe' in the specified PowerShellHome: '$TargetPsHome'." -ErrorAction Stop
     }
-     if (-not (Test-Path $pluginDllPath -PathType Leaf)) {
-         Write-Error "Could not find 'pwrshplugin.dll' in the specified PowerShellHome: '$TargetPsHome'." -ErrorAction Stop
+    if (-not (Test-Path $pluginDllPath -PathType Leaf)) {
+        Write-Error "Could not find 'pwrshplugin.dll' in the specified PowerShellHome: '$TargetPsHome'." -ErrorAction Stop
     }
 
     Write-Verbose "Using specified PowerShellHome: $TargetPsHome"
@@ -88,7 +88,7 @@ if (-not [string]::IsNullOrEmpty($PowerShellHome)) {
 else {
     # Use the current PowerShell instance if PSHome parameter was not specified
     if ($PSVersionTable.PSVersion.Major -lt 7) {
-         Write-Error "This script requires PowerShell 7+ to run, or you must specify the -PowerShellHome parameter pointing to a PowerShell 7+ installation." -ErrorAction Stop
+        Write-Error "This script requires PowerShell 7+ to run, or you must specify the -PowerShellHome parameter pointing to a PowerShell 7+ installation." -ErrorAction Stop
     }
     $TargetPsHome = $PSHOME
     $TargetPsVersion = $PSVersionTable.PSVersion
@@ -98,7 +98,7 @@ else {
 
 # Ensure we have a valid version object
 if ($null -eq $TargetPsVersion) {
-     Write-Error "Could not determine the target PowerShell version." -ErrorAction Stop
+    Write-Error "Could not determine the target PowerShell version." -ErrorAction Stop
 }
 
 # Extract Major.Minor version (e.g., "7.4") required for the plugin config XML
@@ -170,7 +170,7 @@ function Register-WinRmPluginInternal {
         # Ensure the parent path exists before creating the item
         $parentPath = Split-Path -Path $regKey -Parent
         if (-not (Test-Path $parentPath)) {
-             New-Item -Path $parentPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            New-Item -Path $parentPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
         }
         if (-not (Test-Path $regKey)) {
             New-Item $regKey -Force -ErrorAction Stop | Out-Null
@@ -255,7 +255,7 @@ function Install-PluginAndEndpoint {
                 New-Item -Path $PluginVersionedBasePath -ItemType Directory -Force -ErrorAction Stop | Out-Null
             }
             catch {
-                 Write-Error "Failed to create plugin directory '$PluginVersionedBasePath'. Error: $($_.Exception.Message)" -ErrorAction Stop
+                Write-Error "Failed to create plugin directory '$PluginVersionedBasePath'. Error: $($_.Exception.Message)" -ErrorAction Stop
             }
         }
 
@@ -273,41 +273,42 @@ function Install-PluginAndEndpoint {
 
         # 4. Register the plugin in the registry (this creates/updates the registry keys)
         Register-WinRmPluginInternal -PluginDllSystemPath $PluginDllSystemPath `
-                                     -PluginEndpointName $PluginEndpointName `
-                                     -PluginPsVersionMajorMinor $PluginPsVersionMajorMinor `
-                                     -Verbose:$VerbosePreference
+            -PluginEndpointName $PluginEndpointName `
+            -PluginPsVersionMajorMinor $PluginPsVersionMajorMinor `
+            -Verbose:$VerbosePreference
 
         # 5. Register the PSSessionConfiguration (makes it visible to Get-PSSessionConfiguration, etc.)
         #    This reads the registry config we just created. Use -Force if specified.
         Write-Verbose "Registering PSSessionConfiguration: $PluginEndpointName"
         $regParams = @{
-            Name = $PluginEndpointName
-            Force = $ForceWrite
+            Name        = $PluginEndpointName
+            Force       = $ForceWrite
             ErrorAction = 'Stop' # Changed to Stop
         }
         try {
-             Register-PSSessionConfiguration @regParams -Verbose:$false # Suppress verbose from this cmdlet itself
-             Write-Information "Successfully registered PSSessionConfiguration '$PluginEndpointName'." # Use Write-Information
+            Register-PSSessionConfiguration @regParams -Verbose:$false # Suppress verbose from this cmdlet itself
+            Write-Information "Successfully registered PSSessionConfiguration '$PluginEndpointName'." # Use Write-Information
         }
         catch {
             Write-Error "Failed to register PSSessionConfiguration '$PluginEndpointName'. This might happen if the registry configuration is incorrect or WinRM is malfunctioning. Error: $($_.Exception.Message)"
             # Don't stop the whole script here, maybe the other endpoint will work. But return failure.
-             return $false
+            return $false
         }
 
         # 6. Validation
         $validationEndpoint = Get-PSSessionConfiguration -Name $PluginEndpointName -ErrorAction SilentlyContinue
         if ($null -eq $validationEndpoint) {
-             Write-Warning "Validation failed: PSSessionConfiguration '$PluginEndpointName' not found after registration attempt."
-             return $false
-        } else {
-             Write-Verbose "Validation successful: Found PSSessionConfiguration '$PluginEndpointName'."
-             return $true # Indicate success
+            Write-Warning "Validation failed: PSSessionConfiguration '$PluginEndpointName' not found after registration attempt."
+            return $false
+        }
+        else {
+            Write-Verbose "Validation successful: Found PSSessionConfiguration '$PluginEndpointName'."
+            return $true # Indicate success
         }
     } # End ShouldProcess
     else {
-         Write-Warning "Skipped configuration for '$PluginEndpointName' due to -WhatIf."
-         return $false # Indicate skipped
+        Write-Warning "Skipped configuration for '$PluginEndpointName' due to -WhatIf."
+        return $false # Indicate skipped
     }
 }
 
@@ -319,29 +320,29 @@ function Install-PluginAndEndpoint {
 $endpointNameSpecific = "PowerShell.$TargetPsVersionFull"
 Write-Host "`nProcessing Version Specific Endpoint: $endpointNameSpecific" -ForegroundColor Cyan
 $successSpecific = Install-PluginAndEndpoint -PluginDllSystemPath $pluginDllSystemPath `
-                                             -SourcePluginDllPath $sourcePluginDll `
-                                             -PluginConfigFileSystemPath $pluginConfigFileSystemPath `
-                                             -ResolvedTargetPsHome $TargetPsHome `
-                                             -PluginEndpointName $endpointNameSpecific `
-                                             -PluginPsVersionMajorMinor $TargetPsVersionMajorMinor `
-                                             -PluginVersionedBasePath $pluginVersionedBasePath `
-                                             -ForceWrite $Force `
-                                             -Verbose:$VerbosePreference `
-                                             -WhatIf:$WhatIfPreference
+    -SourcePluginDllPath $sourcePluginDll `
+    -PluginConfigFileSystemPath $pluginConfigFileSystemPath `
+    -ResolvedTargetPsHome $TargetPsHome `
+    -PluginEndpointName $endpointNameSpecific `
+    -PluginPsVersionMajorMinor $TargetPsVersionMajorMinor `
+    -PluginVersionedBasePath $pluginVersionedBasePath `
+    -ForceWrite $Force `
+    -Verbose:$VerbosePreference `
+    -WhatIf:$WhatIfPreference
 
 # Register Major Version Endpoint (e.g., PowerShell.7)
 $endpointNameMajor = "PowerShell.$($TargetPsVersion.Major)"
 Write-Host "`nProcessing Major Version Endpoint: $endpointNameMajor" -ForegroundColor Cyan
 $successMajor = Install-PluginAndEndpoint -PluginDllSystemPath $pluginDllSystemPath `
-                                          -SourcePluginDllPath $sourcePluginDll `
-                                          -PluginConfigFileSystemPath $pluginConfigFileSystemPath `
-                                          -ResolvedTargetPsHome $TargetPsHome `
-                                          -PluginEndpointName $endpointNameMajor `
-                                          -PluginPsVersionMajorMinor $TargetPsVersionMajorMinor `
-                                          -PluginVersionedBasePath $pluginVersionedBasePath `
-                                          -ForceWrite $Force `
-                                          -Verbose:$VerbosePreference `
-                                          -WhatIf:$WhatIfPreference
+    -SourcePluginDllPath $sourcePluginDll `
+    -PluginConfigFileSystemPath $pluginConfigFileSystemPath `
+    -ResolvedTargetPsHome $TargetPsHome `
+    -PluginEndpointName $endpointNameMajor `
+    -PluginPsVersionMajorMinor $TargetPsVersionMajorMinor `
+    -PluginVersionedBasePath $pluginVersionedBasePath `
+    -ForceWrite $Force `
+    -Verbose:$VerbosePreference `
+    -WhatIf:$WhatIfPreference
 
 #endregion
 
@@ -355,11 +356,11 @@ if (($successSpecific -or $successMajor) -and (-not $WhatIfPreference)) {
         Write-Information "WinRM service restarted successfully."
     }
     catch {
-         Write-Error "Failed to restart the WinRM service. You may need to restart it manually ('Restart-Service WinRM'). Error: $($_.Exception.Message)"
+        Write-Error "Failed to restart the WinRM service. You may need to restart it manually ('Restart-Service WinRM'). Error: $($_.Exception.Message)"
     }
 }
 elseif (-not ($successSpecific -or $successMajor)) {
-     Write-Warning "No changes were successfully applied. WinRM service was not restarted."
+    Write-Warning "No changes were successfully applied. WinRM service was not restarted."
 }
 
 Write-Host "`nScript finished." -ForegroundColor Green

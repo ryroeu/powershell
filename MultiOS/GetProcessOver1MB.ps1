@@ -12,7 +12,7 @@ param(
 )
 
 Get-Process |
-    Where-Object WorkingSet64 -gt $MinimumBytes |
+    Where-Object WorkingSet64 -GT $MinimumBytes |
     Sort-Object WorkingSet64 -Descending |
     Select-Object Id, ProcessName,
     @{ Name = 'WorkingSetMB'; Expression = { [Math]::Round($_.WorkingSet64 / 1MB, 2) } },

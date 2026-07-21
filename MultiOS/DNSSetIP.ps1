@@ -20,7 +20,7 @@ if ($IsWindows) {
         foreach ($name in $Interface) { Get-NetAdapter -Name $name -ErrorAction Stop }
     }
     else {
-        Get-NetAdapter | Where-Object Status -eq 'Up'
+        Get-NetAdapter | Where-Object Status -EQ 'Up'
     }
     foreach ($adapter in $adapters) {
         if ($PSCmdlet.ShouldProcess($adapter.Name, "Set DNS servers to '$($ServerAddress -join ', ')'")) {
@@ -42,7 +42,7 @@ elseif ($IsLinux) {
     if ([Environment]::UserName -ne 'root') { throw 'Run this script as root on Linux.' }
     if (Get-Command resolvectl -CommandType Application -ErrorAction SilentlyContinue) {
         if (-not $Interface) {
-            $Interface = @((& ip route show default | Select-Object -First 1) -replace '^.*\sdev\s+(\S+).*$','$1')
+            $Interface = @((& ip route show default | Select-Object -First 1) -replace '^.*\sdev\s+(\S+).*$', '$1')
         }
         foreach ($name in $Interface) {
             if ($PSCmdlet.ShouldProcess($name, "Set DNS servers to '$($ServerAddress -join ', ')'")) {
@@ -55,8 +55,8 @@ elseif ($IsLinux) {
         if (-not $Interface) { throw 'Specify NetworkManager connection names with -Interface.' }
         foreach ($connection in $Interface) {
             if ($PSCmdlet.ShouldProcess($connection, "Set DNS servers to '$($ServerAddress -join ', ')'")) {
-                $ipv4 = @($ServerAddress | Where-Object AddressFamily -eq InterNetwork).IPAddressToString -join ','
-                $ipv6 = @($ServerAddress | Where-Object AddressFamily -eq InterNetworkV6).IPAddressToString -join ','
+                $ipv4 = @($ServerAddress | Where-Object AddressFamily -EQ InterNetwork).IPAddressToString -join ','
+                $ipv6 = @($ServerAddress | Where-Object AddressFamily -EQ InterNetworkV6).IPAddressToString -join ','
                 if ($ipv4) { & nmcli connection modify $connection ipv4.dns $ipv4 ipv4.ignore-auto-dns yes }
                 if ($ipv6) { & nmcli connection modify $connection ipv6.dns $ipv6 ipv6.ignore-auto-dns yes }
                 & nmcli connection up $connection

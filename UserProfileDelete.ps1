@@ -1,4 +1,4 @@
-﻿#Requires -RunAsAdministrator
+#Requires -RunAsAdministrator
 
 <#
 .SYNOPSIS
@@ -93,7 +93,7 @@ function Remove-SelectedProfile {
         foreach ($computer in $script:Computers) {
             try {
                 $userProfile = Get-CimInstance -ComputerName $computer -ClassName Win32_UserProfile -ErrorAction Stop |
-                    Where-Object LocalPath -eq $profilePath
+                    Where-Object LocalPath -EQ $profilePath
 
                 if (-not $userProfile) {
                     $message = 'INFO: {0} profile does not exist on {1}' -f $profilePath, $computer

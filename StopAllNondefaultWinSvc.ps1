@@ -32,7 +32,7 @@ $services = foreach ($serviceName in $Name | Sort-Object -Unique) {
 }
 
 if ($Stop) {
-    foreach ($service in $services | Where-Object Status -ne 'Stopped') {
+    foreach ($service in $services | Where-Object Status -NE 'Stopped') {
         if ($PSCmdlet.ShouldProcess($service.Name, 'Stop Windows service')) {
             Stop-Service -Name $service.Name -Force:$Force -ErrorAction Stop
             $service.WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped, [timespan]::FromSeconds($TimeoutSeconds))

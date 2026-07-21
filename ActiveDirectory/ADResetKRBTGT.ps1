@@ -17,10 +17,24 @@ $parameters = @{ Identity = 'krbtgt'; Properties = 'DistinguishedName' }
 if ($Server) { $parameters.Server = $Server }
 $account = Get-ADUser @parameters
 
-$alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+'
+$characterSets = @(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    'abcdefghijklmnopqrstuvwxyz',
+    '0123456789',
+    '!@#$%^&*()-_=+'
+)
+$characters = [Collections.Generic.List[char]]::new()
+foreach ($characterSet in $characterSets) {
+    $characters.Add($characterSet[[Security.Cryptography.RandomNumberGenerator]::GetInt32($characterSet.Length)])
+}
+$alphabet = $characterSets -join ''
+while ($characters.Count -lt 64) {
+    $characters.Add($alphabet[[Security.Cryptography.RandomNumberGenerator]::GetInt32($alphabet.Length)])
+}
+$characters = $characters | Sort-Object { [Security.Cryptography.RandomNumberGenerator]::GetInt32([int]::MaxValue) }
 $password = [securestring]::new()
-for ($index = 0; $index -lt 64; $index++) {
-    $password.AppendChar($alphabet[[Security.Cryptography.RandomNumberGenerator]::GetInt32($alphabet.Length)])
+foreach ($character in $characters) {
+    $password.AppendChar($character)
 }
 $password.MakeReadOnly()
 

@@ -41,12 +41,22 @@ elseif ($IsLinux) {
 }
 elseif ($IsMacOS) {
     $resolver = $null
-    & /usr/sbin/scutil --dns | ForEach-Object {
+    $dnsServers = @(& /usr/sbin/scutil --dns 2>$null | ForEach-Object {
         if ($_ -match '^resolver #(?<Number>\d+)') { $resolver = "resolver-$($Matches.Number)" }
         elseif ($_ -match '^\s*nameserver\[\d+\]\s*:\s*(?<Address>\S+)') {
             [pscustomobject]@{ Platform = 'macOS'; Interface = $resolver; InterfaceIndex = $null; AddressFamily = $null; ServerAddress = $Matches.Address }
         }
+    })
+
+    if ($dnsServers.Count -eq 0 -and (Test-Path -LiteralPath /etc/resolv.conf)) {
+        $dnsServers = @(Get-Content -LiteralPath /etc/resolv.conf | ForEach-Object {
+            if ($_ -match '^\s*nameserver\s+(?<Address>\S+)') {
+                [pscustomobject]@{ Platform = 'macOS'; Interface = 'resolv.conf'; InterfaceIndex = $null; AddressFamily = $null; ServerAddress = $Matches.Address }
+            }
+        })
     }
+
+    $dnsServers
 }
 else {
     throw "Unsupported platform '$($PSVersionTable.Platform)'."

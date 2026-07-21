@@ -38,13 +38,13 @@
 # It is designed to be run in PowerShell Core (pwsh) for cross-platform compatibility.
 # It is recommended to run the script with administrative privileges for full functionality.
 function Get-Port {
-    [CmdletBinding(SupportsShouldProcess=$false)]
+    [CmdletBinding(SupportsShouldProcess = $false)]
     param(
-        [Parameter(Mandatory=$false)]
-        [ValidateRange(1,65535)]
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 65535)]
         [int]$Port = 8989,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [System.Net.IPAddress]$IPAddress = [System.Net.IPAddress]::Loopback # Default to localhost for safety
     )
 
@@ -58,7 +58,8 @@ function Get-Port {
         Write-Host "Listener active on $IPAddress`: `$Port. Press Ctrl+C to stop." -ForegroundColor Green
 
         # Main loop to accept clients
-        while ($true) { # Loop indefinitely until Ctrl+C
+        while ($true) {
+            # Loop indefinitely until Ctrl+C
             try {
                 # Check for completed jobs and remove them to clean up
                 $jobs | Where-Object { $_.State -in 'Completed', 'Failed', 'Stopped' } | ForEach-Object {
@@ -99,15 +100,17 @@ function Get-Port {
                                 try {
                                     # ReadLine() will block until a line is received, timeout occurs, or client disconnects
                                     $line = $reader.ReadLine()
-                                } catch [System.IO.IOException] {
-                                     # Catch timeout or forcible close errors
-                                     Write-Warning "($clientIPAddr) IO Error reading from client (Timeout or closed connection): $($_.Exception.Message)"
-                                     $line = $null # Ensure loop condition might exit
-                                     $clientDisconnected = $true
-                                } catch {
-                                     Write-Warning "($clientIPAddr) Unexpected Error reading from client: $($_.Exception.Message)"
-                                     $line = $null
-                                     $clientDisconnected = $true
+                                }
+                                catch [System.IO.IOException] {
+                                    # Catch timeout or forcible close errors
+                                    Write-Warning "($clientIPAddr) IO Error reading from client (Timeout or closed connection): $($_.Exception.Message)"
+                                    $line = $null # Ensure loop condition might exit
+                                    $clientDisconnected = $true
+                                }
+                                catch {
+                                    Write-Warning "($clientIPAddr) Unexpected Error reading from client: $($_.Exception.Message)"
+                                    $line = $null
+                                    $clientDisconnected = $true
                                 }
 
                                 if ($null -ne $line) {
@@ -122,7 +125,8 @@ function Get-Port {
                                         Write-Host "($clientIPAddr): Client sent termination signal." -ForegroundColor Yellow
                                         break # Exit inner read loop for this client
                                     }
-                                } elseif ($clientDisconnected) {
+                                }
+                                elseif ($clientDisconnected) {
                                     break # Exit loop if an error indicated disconnection
                                 }
 
@@ -132,9 +136,11 @@ function Get-Port {
                                 Write-Host "($clientIPAddr): Client connected but sent no data or timed out." -ForegroundColor Yellow
                             }
 
-                        } catch {
+                        }
+                        catch {
                             Write-Warning "($clientIPAddr) Error processing client: $($_.Exception.Message)"
-                        } finally {
+                        }
+                        finally {
                             # Cleanup resources for this client connection *within the job*
                             if ($null -ne $reader) { $reader.Dispose() }
                             if ($null -ne $stream) { $stream.Dispose() }
@@ -146,39 +152,45 @@ function Get-Port {
                     $jobs.Add($job) # Add the new job to our tracking list
                     Write-Verbose "Started job $($job.Id) to handle client $clientIP"
 
-                } else {
+                }
+                else {
                     # No pending connection, wait a short time to avoid pegging CPU
                     Start-Sleep -Milliseconds 100
                 }
 
-            } catch [System.Net.Sockets.SocketException] {
-                 # Handle errors during AcceptTcpClient (less common if Start() succeeded)
-                 Write-Error "Socket Error accepting client: $($_.Exception.Message)"
-                 # Potentially break the loop or log and continue depending on severity
-                 Start-Sleep -Seconds 1
-            } catch {
-                 Write-Error "Unexpected Error in accept loop: $($_.Exception.Message)"
-                 # Potentially break the loop or log and continue
-                 Start-Sleep -Seconds 1
+            }
+            catch [System.Net.Sockets.SocketException] {
+                # Handle errors during AcceptTcpClient (less common if Start() succeeded)
+                Write-Error "Socket Error accepting client: $($_.Exception.Message)"
+                # Potentially break the loop or log and continue depending on severity
+                Start-Sleep -Seconds 1
+            }
+            catch {
+                Write-Error "Unexpected Error in accept loop: $($_.Exception.Message)"
+                # Potentially break the loop or log and continue
+                Start-Sleep -Seconds 1
             }
         } # End while ($true)
 
-    } catch [System.Net.Sockets.SocketException] {
+    }
+    catch [System.Net.Sockets.SocketException] {
         Write-Error "Failed to start listener on $IPAddress`: `$Port. Port may be in use or permission denied. $($_.Exception.Message)"
-    } catch {
+    }
+    catch {
         Write-Error "An unexpected error occurred: $($_.Exception.Message)"
-    } finally {
+    }
+    finally {
         # This block executes when the loop exits (e.g., Ctrl+C)
         Write-Host "`nStopping listener..." -ForegroundColor Yellow
         if ($null -ne $listener -and $null -ne $listener.Server -and $listener.Server.IsBound) {
-             $listener.Stop()
-             Write-Verbose "Listener stopped."
+            $listener.Stop()
+            Write-Verbose "Listener stopped."
         }
         # Stop and remove any running jobs
         if ($jobs.Count -gt 0) {
             Write-Host "Stopping and cleaning up $($jobs.Count) active client jobs..." -ForegroundColor Yellow
             $jobs | ForEach-Object {
-                 Stop-Job $_ -PassThru | Remove-Job -Force
+                Stop-Job $_ -PassThru | Remove-Job -Force
             }
         }
         Write-Host "Server shut down complete." -ForegroundColor Green
@@ -186,16 +198,16 @@ function Get-Port {
 }
 
 function Send-Msg {
-    [CmdletBinding(SupportsShouldProcess=$false)]
+    [CmdletBinding(SupportsShouldProcess = $false)]
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Message = "$([char]4)", # Default to End-of-Transmission
 
-        [Parameter(Mandatory=$false)]
-        [ValidateRange(1,65535)]
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 65535)]
         [int]$Port = 8989,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Server = "localhost" # Use string for flexibility (hostname or IP)
     )
 
@@ -208,25 +220,30 @@ function Send-Msg {
         $client = New-Object System.Net.Sockets.TcpClient
         # Add a connection timeout (e.g., 5 seconds)
         $connectTask = $client.ConnectAsync($Server, $Port)
-        if ($connectTask.Wait(5000)) { # Wait for 5 seconds
-             Write-Verbose "Connection successful."
-             $stream = $client.GetStream()
-             # Use UTF8 encoding for broader compatibility
-             $writer = New-Object System.IO.StreamWriter($stream, [System.Text.Encoding]::UTF8)
-             # Use WriteLine to ensure message is sent immediately with newline (often expected by line readers)
-             # If the original receiver *strictly* needs no newline, use $writer.Write($Message)
-             $writer.WriteLine($Message)
-             $writer.Flush() # Ensure data is sent
-             Write-Verbose "Message sent: $Message"
-        } else {
+        if ($connectTask.Wait(5000)) {
+            # Wait for 5 seconds
+            Write-Verbose "Connection successful."
+            $stream = $client.GetStream()
+            # Use UTF8 encoding for broader compatibility
+            $writer = New-Object System.IO.StreamWriter($stream, [System.Text.Encoding]::UTF8)
+            # Use WriteLine to ensure message is sent immediately with newline (often expected by line readers)
+            # If the original receiver *strictly* needs no newline, use $writer.Write($Message)
+            $writer.WriteLine($Message)
+            $writer.Flush() # Ensure data is sent
+            Write-Verbose "Message sent: $Message"
+        }
+        else {
             throw "Connection timed out connecting to $Server`:`$Port."
         }
 
-    } catch [System.Net.Sockets.SocketException] {
+    }
+    catch [System.Net.Sockets.SocketException] {
         Write-Error "Cannot connect to $Server`:`$Port. Server may not be running or firewall blocking. $($_.Exception.Message)"
-    } catch {
+    }
+    catch {
         Write-Error "An error occurred during send: $($_.Exception.Message)"
-    } finally {
+    }
+    finally {
         # Dispose in reverse order of creation
         if ($null -ne $writer) { $writer.Dispose() }
         if ($null -ne $stream) { $stream.Dispose() }

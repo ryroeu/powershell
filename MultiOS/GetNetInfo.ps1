@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Cross-platform PowerShell script to gather network information.
 .DESCRIPTION
@@ -19,11 +19,14 @@ param(
 # OS Detection
 if ($IsWindows) {
     $platform = "Windows"
-} elseif ($IsMacOS) {
+}
+elseif ($IsMacOS) {
     $platform = "macOS"
-} elseif ($IsLinux) {
+}
+elseif ($IsLinux) {
     $platform = "Linux"
-} else {
+}
+else {
     $platform = "Other"
 }
 
@@ -41,11 +44,12 @@ function Convert-HexNetmaskToPrefix {
     $hex = $hexNetmask.Trim().TrimStart("0x")
     try {
         $intValue = [Convert]::ToUInt32($hex, 16)
-    } catch {
+    }
+    catch {
         Write-Verbose "Conversion of netmask $hexNetmask failed."
         return 24  # fallback
     }
-    $binary = [Convert]::ToString($intValue,2).PadLeft(32,'0')
+    $binary = [Convert]::ToString($intValue, 2).PadLeft(32, '0')
     $ones = ($binary.ToCharArray() | Where-Object { $_ -eq '1' }).Count
     return $ones
 }
@@ -91,9 +95,10 @@ function Get-LocalIPInfo {
         Write-Verbose "Attempting to retrieve IP using Get-NetIPAddress..."
         try {
             $ipObj = Get-NetIPAddress -AddressFamily IPv4 |
-                     Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.IPAddress -notmatch ':' } |
-                     Select-Object -First 1
-        } catch {
+                Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.IPAddress -notmatch ':' } |
+                Select-Object -First 1
+        }
+        catch {
             Write-Verbose "Get-NetIPAddress failed: $_"
         }
         if ($ipObj) {
@@ -106,9 +111,10 @@ function Get-LocalIPInfo {
         Write-Verbose "Falling back to Get-CimInstance..."
         try {
             $ipConfig = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration |
-                        Where-Object { $_.IPAddress -and $_.IPAddress[0] -ne "127.0.0.1" } |
-                        Select-Object -First 1
-        } catch {
+                Where-Object { $_.IPAddress -and $_.IPAddress[0] -ne "127.0.0.1" } |
+                Select-Object -First 1
+        }
+        catch {
             Write-Verbose "Get-CimInstance failed: $_"
         }
         if ($ipConfig -and $ipConfig.IPAddress[0] -and $ipConfig.IPSubnet[0]) {
@@ -126,7 +132,8 @@ function Get-LocalIPInfo {
         foreach ($line in $ipInfo) {
             if ($line -match 'IPv4 Address.*:\s*([\d\.]+)') {
                 $localIP = $Matches[1]
-            } elseif ($line -match 'Subnet Mask.*:\s*([\d\.]+)') {
+            }
+            elseif ($line -match 'Subnet Mask.*:\s*([\d\.]+)') {
                 $subnetMask = $Matches[1]
             }
         }
@@ -138,7 +145,8 @@ function Get-LocalIPInfo {
                 Subnet = $prefix
             }
         }
-    } elseif ($platform -eq "macOS") {
+    }
+    elseif ($platform -eq "macOS") {
         Write-Verbose "Attempting to retrieve IP using ifconfig on macOS..."
         $ifconfigOutput = ifconfig 2>$null
         # Look for an active non-loopback interface (commonly en0)
@@ -152,19 +160,22 @@ function Get-LocalIPInfo {
                 IP     = $ip
                 Subnet = $prefix
             }
-        } else {
+        }
+        else {
             Write-Verbose "Failed to parse ifconfig output."
         }
-    } elseif ($platform -eq "Linux") {
+    }
+    elseif ($platform -eq "Linux") {
         Write-Verbose "Attempting to retrieve IP using 'ip' command on Linux..."
-        $ipMatch = ip -4 addr show | Select-String -Pattern "inet " | Where-Object { $_ -notmatch "127.0.0.1"} | Select-Object -First 1
+        $ipMatch = ip -4 addr show | Select-String -Pattern "inet " | Where-Object { $_ -notmatch "127.0.0.1" } | Select-Object -First 1
         if ($null -ne $ipMatch -and $ipMatch.ToString() -match 'inet\s+([\d\.]+)/(\d+)') {
             Write-Verbose "IP retrieved via ip command: $($Matches[1])"
             return [PSCustomObject]@{
                 IP     = $Matches[1]
                 Subnet = [int]$Matches[2]
             }
-        } else {
+        }
+        else {
             Write-Warning "Unable to determine IP information on Linux."
             return $null
         }
@@ -197,31 +208,38 @@ function Get-DefaultGateway {
     if ($platform -eq "Windows") {
         try {
             $gw = Get-NetRoute -DestinationPrefix "0.0.0.0/0" |
-                  Sort-Object -Property RouteMetric |
-                  Select-Object -First 1 -ExpandProperty NextHop
-        } catch {
+                Sort-Object -Property RouteMetric |
+                Select-Object -First 1 -ExpandProperty NextHop
+        }
+        catch {
             $gw = "Unavailable"
         }
-    } elseif ($platform -eq "macOS") {
+    }
+    elseif ($platform -eq "macOS") {
         try {
             # On macOS, use netstat to retrieve the default gateway.
             $gwLine = netstat -rn | Select-String -Pattern '^default' | Select-Object -First 1
             if ($gwLine -match '^default\s+([\d\.]+)') {
                 $gw = $Matches[1]
-            } else {
+            }
+            else {
                 $gw = "Unavailable"
             }
-        } catch {
+        }
+        catch {
             $gw = "Unavailable"
         }
-    } elseif ($platform -eq "Linux") {
+    }
+    elseif ($platform -eq "Linux") {
         try {
             $gwLine = (ip route show default | Select-String -Pattern "^default") -split " "
             $gw = $gwLine[2]
-        } catch {
+        }
+        catch {
             $gw = "Unavailable"
         }
-    } else {
+    }
+    else {
         $gw = "Unavailable"
     }
     return $gw
@@ -231,7 +249,8 @@ $routerLocalIP = Get-DefaultGateway
 # Get public IP address (external IP of router)
 try {
     $routerPublicIP = Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec $PublicIPTimeoutSeconds
-} catch {
+}
+catch {
     $routerPublicIP = "Unavailable"
 }
 
@@ -291,9 +310,11 @@ function Test-HostReachable {
     try {
         $reply = $ping.Send($IPAddress, $TimeoutMilliseconds)
         return $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
-    } catch {
+    }
+    catch {
         return $false
-    } finally {
+    }
+    finally {
         $ping.Dispose()
     }
 }
@@ -311,9 +332,11 @@ function Test-PingCapability {
     try {
         $null = $ping.Send($IPAddress, [Math]::Max($TimeoutMilliseconds, 250))
         return $true
-    } catch {
+    }
+    catch {
         return $false
-    } finally {
+    }
+    finally {
         $ping.Dispose()
     }
 }
@@ -354,9 +377,11 @@ function Get-ActiveHost {
                 if ($reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
                     $_
                 }
-            } catch {
+            }
+            catch {
                 Write-Verbose "Ping to '$_' failed."
-            } finally {
+            }
+            finally {
                 $ping.Dispose()
             }
         } -ThrottleLimit $ParallelThrottleLimit

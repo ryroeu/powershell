@@ -30,7 +30,7 @@ param(
 
 if (-not $IsWindows) { throw 'This script requires Windows.' }
 $packages = @(Get-ChildItem -LiteralPath $PatchPath -Recurse -File |
-        Where-Object Extension -in '.cab', '.msu' |
+        Where-Object Extension -In '.cab', '.msu' |
         Sort-Object FullName)
 if (-not $packages) { throw "No CAB or MSU packages were found below '$PatchPath'." }
 

@@ -33,14 +33,14 @@ try {
         foreach ($auditEvent in $page) {
             $auditData = $auditEvent.AuditData | ConvertFrom-Json
             $events.Add([pscustomobject]@{
-                Organization = $Organization
-                CreationDate = $auditEvent.CreationDate
-                UserId       = $auditEvent.UserIds
-                Operation    = $auditEvent.Operations
-                ResultStatus = $auditEvent.ResultStatus
-                Parameters   = $auditData.Parameters
-                AuditData    = $auditData
-            })
+                    Organization = $Organization
+                    CreationDate = $auditEvent.CreationDate
+                    UserId       = $auditEvent.UserIds
+                    Operation    = $auditEvent.Operations
+                    ResultStatus = $auditEvent.ResultStatus
+                    Parameters   = $auditData.Parameters
+                    AuditData    = $auditData
+                })
         }
     } while ($page.Count -eq 5000)
 

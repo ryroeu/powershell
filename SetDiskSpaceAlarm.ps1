@@ -28,6 +28,8 @@ param(
     [double]$OtherDriveThresholdGB = 60
 )
 
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+
 $computerName = $env:COMPUTERNAME
 $systemDrive = $env:SystemDrive
 $volumes = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3'

@@ -46,7 +46,12 @@ $registryPaths = @(
 
 foreach ($registryPath in $registryPaths) {
     if (-not (Test-Path -LiteralPath $registryPath)) {
-        New-Item -Path $registryPath -Force | Out-Null
+        if ($PSCmdlet.ShouldProcess($registryPath, 'Create registry key')) {
+            New-Item -Path $registryPath -Force | Out-Null
+        }
+        else {
+            continue
+        }
     }
 
     foreach ($entry in $folders.GetEnumerator()) {

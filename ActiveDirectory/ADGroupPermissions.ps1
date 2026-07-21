@@ -24,32 +24,32 @@ $results = @(
         $acl = Get-Acl -LiteralPath "AD:$($adGroup.DistinguishedName)"
         foreach ($access in $acl.Access) {
             [pscustomobject]@{
-                TargetType             = 'ActiveDirectoryGroup'
-                Target                 = $adGroup.DistinguishedName
-                IdentityReference      = $access.IdentityReference
-                Rights                 = $access.ActiveDirectoryRights
-                AccessControlType      = $access.AccessControlType
-                IsInherited            = $access.IsInherited
-                InheritanceType        = $access.InheritanceType
-                ObjectType             = $access.ObjectType
-                InheritedObjectType    = $access.InheritedObjectType
+                TargetType          = 'ActiveDirectoryGroup'
+                Target              = $adGroup.DistinguishedName
+                IdentityReference   = $access.IdentityReference
+                Rights              = $access.ActiveDirectoryRights
+                AccessControlType   = $access.AccessControlType
+                IsInherited         = $access.IsInherited
+                InheritanceType     = $access.InheritanceType
+                ObjectType          = $access.ObjectType
+                InheritedObjectType = $access.InheritedObjectType
             }
         }
     }
 
     foreach ($itemPath in $Path) {
         $resolvedPath = (Resolve-Path -LiteralPath $itemPath -ErrorAction Stop).Path
-        foreach ($access in (Get-Acl -LiteralPath $resolvedPath).Access | Where-Object IsInherited -eq $false) {
+        foreach ($access in (Get-Acl -LiteralPath $resolvedPath).Access | Where-Object IsInherited -EQ $false) {
             [pscustomobject]@{
-                TargetType             = 'FileSystemPath'
-                Target                 = $resolvedPath
-                IdentityReference      = $access.IdentityReference
-                Rights                 = $access.FileSystemRights
-                AccessControlType      = $access.AccessControlType
-                IsInherited            = $access.IsInherited
-                InheritanceType        = $access.InheritanceFlags
-                ObjectType             = $null
-                InheritedObjectType    = $null
+                TargetType          = 'FileSystemPath'
+                Target              = $resolvedPath
+                IdentityReference   = $access.IdentityReference
+                Rights              = $access.FileSystemRights
+                AccessControlType   = $access.AccessControlType
+                IsInherited         = $access.IsInherited
+                InheritanceType     = $access.InheritanceFlags
+                ObjectType          = $null
+                InheritedObjectType = $null
             }
         }
     }

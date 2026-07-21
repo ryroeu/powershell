@@ -7,7 +7,7 @@ using namespace System.Security.Cryptography.X509Certificates
 
 function New-X509Certificate {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
-    Param (
+    param (
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [String]$CommonName

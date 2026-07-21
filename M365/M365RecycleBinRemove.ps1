@@ -2,7 +2,7 @@
 .SYNOPSIS
   Empty a SharePoint or OneDrive recycle bin, or permanently delete Entra ID recycled objects.
 #>
-[CmdletBinding(SupportsShouldProcess = $true)]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [string]$SharePointSiteUrl,
     [string]$TenantAdminUrl,
@@ -15,33 +15,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Install-ModuleIfMissing {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [string]$Name,
-
-        [string]$MinVersion = '0.0.0'
-    )
-
-    if (-not (Get-Module -ListAvailable -Name $Name)) {
-        Install-Module -Name $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
-    }
-
-    Import-Module -Name $Name -MinimumVersion $MinVersion -ErrorAction Stop
-}
-
 function Get-PnPClientId {
     param(
         [string]$ExplicitClientId
     )
 
     foreach ($candidate in @(
-        $ExplicitClientId,
-        $env:ENTRAID_APP_ID,
-        $env:ENTRAID_CLIENT_ID,
-        $env:AZURE_CLIENT_ID
-    )) {
+            $ExplicitClientId,
+            $env:ENTRAID_APP_ID,
+            $env:ENTRAID_CLIENT_ID,
+            $env:AZURE_CLIENT_ID
+        )) {
         if (-not [string]::IsNullOrWhiteSpace($candidate)) {
             return $candidate
         }
@@ -141,7 +125,9 @@ function Select-RecycleBinItem {
 }
 
 if ($PurgeDeletedUsers) {
-    Install-ModuleIfMissing -Name Microsoft.Graph -MinVersion '2.12.0'
+    if (-not (Get-Command Connect-MgGraph -ErrorAction SilentlyContinue)) {
+        throw 'Microsoft Graph PowerShell is required. Install it before using -PurgeDeletedUsers.'
+    }
 
     $scopes = @('Directory.AccessAsUser.All', 'User.ReadWrite.All')
     if ($ForceDeviceCode) {
@@ -182,7 +168,9 @@ if ($PurgeDeletedUsers) {
     }
 }
 
-Install-ModuleIfMissing -Name PnP.PowerShell -MinVersion '2.5.0'
+if (-not (Get-Command Connect-PnPOnline -ErrorAction SilentlyContinue)) {
+    throw 'PnP.PowerShell is required for SharePoint and OneDrive recycle-bin operations.'
+}
 $resolvedClientId = Get-PnPClientId -ExplicitClientId $PnPClientId
 
 if ($TenantLevel) {

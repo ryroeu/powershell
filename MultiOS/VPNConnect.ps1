@@ -171,9 +171,9 @@ function Resolve-Backend {
 
     switch ($Platform) {
         'Windows' { return 'RasDial' }
-        'MacOS'   { return 'Scutil' }
-        'Linux'   { return 'Nmcli' }
-        default   { throw "No default backend is defined for platform '$Platform'." }
+        'MacOS' { return 'Scutil' }
+        'Linux' { return 'Nmcli' }
+        default { throw "No default backend is defined for platform '$Platform'." }
     }
 }
 
@@ -536,7 +536,8 @@ $targetDescription = switch ($resolvedBackend) {
     'OpenConnect' {
         if ($ServerAddress) {
             $ServerAddress
-        } else {
+        }
+        else {
             $ProfileName
         }
     }

@@ -21,4 +21,4 @@ if (-not $IsLinux) {
         (-not $Name -or $_.Name -like $Name)
     } |
     Select-Object Name, Description, InterfaceType, OperationalStatus,
-        @{Name = 'MacAddress'; Expression = { $_.GetPhysicalAddress().ToString() -replace '(..)(?=.)', '$1:' } }
+    @{Name = 'MacAddress'; Expression = { $_.GetPhysicalAddress().ToString() -replace '(..)(?=.)', '$1:' } }

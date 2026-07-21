@@ -39,16 +39,16 @@ $results = foreach ($itemPath in $Path) {
         foreach ($member in $members) {
             $details = Get-ADObject -Identity $member.DistinguishedName -Properties SamAccountName, DisplayName, Enabled
             [pscustomobject]@{
-                Path               = $resolvedPath
-                IdentityReference  = $accessRule.IdentityReference.Value
-                Permission         = $accessRule.FileSystemRights
-                AccessControlType  = $accessRule.AccessControlType
-                IsInherited        = $accessRule.IsInherited
-                MemberName         = $details.SamAccountName
-                MemberDisplayName  = $details.DisplayName
-                MemberObjectClass  = $details.ObjectClass
-                MemberEnabled      = $details.Enabled
-                MembershipSource   = if ($adObject.ObjectClass -eq 'group') { $adObject.SamAccountName } else { 'Direct' }
+                Path              = $resolvedPath
+                IdentityReference = $accessRule.IdentityReference.Value
+                Permission        = $accessRule.FileSystemRights
+                AccessControlType = $accessRule.AccessControlType
+                IsInherited       = $accessRule.IsInherited
+                MemberName        = $details.SamAccountName
+                MemberDisplayName = $details.DisplayName
+                MemberObjectClass = $details.ObjectClass
+                MemberEnabled     = $details.Enabled
+                MembershipSource  = if ($adObject.ObjectClass -eq 'group') { $adObject.SamAccountName } else { 'Direct' }
             }
         }
     }

@@ -20,16 +20,10 @@ if ($IsWindows) {
     $lastBootTime = (Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime
 }
 elseif ($IsLinux) {
-    $bootTimeText = (& uptime -s).Trim()
-    if ($LASTEXITCODE -ne 0) { throw "uptime failed with exit code $LASTEXITCODE." }
-    $lastBootTime = [datetime]::Parse($bootTimeText, [Globalization.CultureInfo]::InvariantCulture)
+    $lastBootTime = (Get-Date).Subtract([timespan]::FromMilliseconds([Environment]::TickCount64))
 }
 elseif ($IsMacOS) {
-    $bootTimeText = (& sysctl -n kern.boottime).Trim()
-    if ($LASTEXITCODE -ne 0 -or $bootTimeText -notmatch 'sec\s*=\s*(\d+)') {
-        throw "Could not determine the macOS boot time from '$bootTimeText'."
-    }
-    $lastBootTime = [datetimeoffset]::FromUnixTimeSeconds([long]$Matches[1]).LocalDateTime
+    $lastBootTime = (Get-Date).Subtract([timespan]::FromMilliseconds([Environment]::TickCount64))
 }
 else {
     throw "Unsupported platform '$($PSVersionTable.Platform)'."
@@ -37,10 +31,10 @@ else {
 
 $uptime = (Get-Date) - $lastBootTime
 $report = [pscustomobject]@{
-    ComputerName = [Environment]::MachineName
-    LastBootTime = $lastBootTime
-    UptimeDays   = [Math]::Round($uptime.TotalDays, 2)
-    ThresholdDays = $ThresholdDays
+    ComputerName    = [Environment]::MachineName
+    LastBootTime    = $lastBootTime
+    UptimeDays      = [Math]::Round($uptime.TotalDays, 2)
+    ThresholdDays   = $ThresholdDays
     RebootScheduled = $false
 }
 if ($uptime.TotalDays -le $ThresholdDays) {

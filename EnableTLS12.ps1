@@ -15,6 +15,6 @@ param()
 [pscustomobject]@{
     PowerShellVersion = $PSVersionTable.PSVersion
     HttpStack         = 'System.Net.Http.HttpClient'
-    TlsConfiguration = 'Operating-system defaults (TLS 1.2/1.3 where enabled)'
+    TlsConfiguration  = 'Operating-system defaults (TLS 1.2/1.3 where enabled)'
     Changed           = $false
 }

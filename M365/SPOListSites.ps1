@@ -32,11 +32,11 @@ function Get-PnPClientId {
     )
 
     foreach ($candidate in @(
-        $ExplicitClientId,
-        $env:ENTRAID_APP_ID,
-        $env:ENTRAID_CLIENT_ID,
-        $env:AZURE_CLIENT_ID
-    )) {
+            $ExplicitClientId,
+            $env:ENTRAID_APP_ID,
+            $env:ENTRAID_CLIENT_ID,
+            $env:AZURE_CLIENT_ID
+        )) {
         if (-not [string]::IsNullOrWhiteSpace($candidate)) {
             return $candidate
         }
