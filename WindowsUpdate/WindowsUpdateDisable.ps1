@@ -1,39 +1,30 @@
-#Requires -RunAsAdministrator
-
 <#
 .SYNOPSIS
-    Disables Windows update.
+    Disables automatic Windows Update checks through policy.
 #>
 
-Write-Host "Attempting to disable Windows Update services..." -ForegroundColor Yellow
+#Requires -RunAsAdministrator
 
-# List of services to disable
-$serviceNames = @("UsoSvc", "wuauserv", "WaaSMedicSvc") # Added WaaSMedicSvc as it tries to repair WU
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [switch]$StopServices
+)
 
-foreach ($serviceName in $serviceNames) {
-    Write-Host "Processing service: $serviceName"
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+$policyPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
 
-    # Check if service exists
-    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-    if (-not $service) {
-        Write-Host "Service $serviceName not found. Skipping." -ForegroundColor Gray
-        continue
-    }
+if ($PSCmdlet.ShouldProcess($policyPath, 'Set NoAutoUpdate policy to 1')) {
+    New-Item -Path $policyPath -Force | Out-Null
+    New-ItemProperty -Path $policyPath -Name NoAutoUpdate -PropertyType DWord -Value 1 -Force | Out-Null
+}
 
-    # Stop the service (ignore errors if already stopped or cannot be stopped)
-    Write-Host " - Attempting to stop $serviceName..."
-    Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
-
-    # Disable the service
-    Write-Host " - Attempting to disable $serviceName (setting StartupType to Disabled)..."
-    try {
-        Set-Service -Name $serviceName -StartupType Disabled -ErrorAction Stop
-        Write-Host " - Service $serviceName successfully set to Disabled." -ForegroundColor Green
-    } catch {
-        Write-Host " - Failed to set StartupType for $serviceName. Error: $($_.Exception.Message)" -ForegroundColor Red
+if ($StopServices) {
+    foreach ($serviceName in 'wuauserv', 'BITS') {
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if ($service -and $service.Status -ne 'Stopped' -and $PSCmdlet.ShouldProcess($serviceName, 'Stop service')) {
+            Stop-Service -Name $serviceName -Force -ErrorAction Stop
+        }
     }
 }
 
-Write-Host "Finished attempting to disable Windows Update services." -ForegroundColor Yellow
-Write-Host "WARNING: Disabling Windows Update leaves your system vulnerable." -ForegroundColor Red
-Write-Host "It is strongly recommended to re-enable updates for security." -ForegroundColor Red
+Write-Warning 'Automatic updates are disabled by local policy. Re-enable them promptly to continue receiving security fixes.'

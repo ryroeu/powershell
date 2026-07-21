@@ -45,7 +45,7 @@ function Get-PnPClientId {
     throw 'PnP.PowerShell interactive login now requires a ClientId. Pass -ClientId or set ENTRAID_APP_ID/ENTRAID_CLIENT_ID.'
 }
 
-function New-PnPInteractiveConnection {
+function Connect-PnPInteractive {
     param(
         [Parameter(Mandatory)]
         [string]$Url,
@@ -73,7 +73,7 @@ function New-PnPInteractiveConnection {
 }
 
 $resolvedClientId = Get-PnPClientId -ExplicitClientId $ClientId
-$adminConnection = New-PnPInteractiveConnection -Url $TenantAdminUrl -ResolvedClientId $resolvedClientId -DeviceLogin:$UseDeviceLogin
+$adminConnection = Connect-PnPInteractive -Url $TenantAdminUrl -ResolvedClientId $resolvedClientId -DeviceLogin:$UseDeviceLogin
 
 $tenantSiteParams = @{
     Connection = $adminConnection
@@ -109,7 +109,7 @@ foreach ($site in $sites) {
     }
 
     try {
-        $siteConnection = New-PnPInteractiveConnection -Url $site.Url -ResolvedClientId $resolvedClientId -DeviceLogin:$UseDeviceLogin
+        $siteConnection = Connect-PnPInteractive -Url $site.Url -ResolvedClientId $resolvedClientId -DeviceLogin:$UseDeviceLogin
         $subwebs = @(Get-PnPSubWeb -Connection $siteConnection -Recurse)
         foreach ($web in $subwebs) {
             if ($web.Url -eq $site.Url) {

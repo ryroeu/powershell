@@ -1,7 +1,22 @@
 <#
 .SYNOPSIS
-    Retrieves domain controller.
+    Retrieves Active Directory domain controllers or the PDC emulator.
 #>
 
-# Get Primary Domain Controller
-(Get-ADDomain).PDCEmulator
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$DomainName,
+
+    [switch]$PDCEmulatorOnly
+)
+
+if ($PDCEmulatorOnly) {
+    if ($DomainName) { (Get-ADDomain -Identity $DomainName).PDCEmulator } else { (Get-ADDomain).PDCEmulator }
+}
+else {
+    $parameters = @{ Filter = '*' }
+    if ($DomainName) { $parameters.DomainName = $DomainName }
+    Get-ADDomainController @parameters
+}

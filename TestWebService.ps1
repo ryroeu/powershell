@@ -1,17 +1,43 @@
 <#
 .SYNOPSIS
-    Tests reachability of internet services.
+    Tests HTTP endpoints and returns status information.
 #>
 
-Describe "Invoke-RestMethod Responses" {
-    Context "Internet Connectivity" {
-        It "Google is Resolvable" {
-            $online = Invoke-WebRequest -Uri "https://google.com/"
-            $online.StatusCode
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory, ValueFromPipeline)]
+    [uri[]]$Uri,
+
+    [ValidateRange(1, 300)]
+    [int]$TimeoutSeconds = 30
+)
+
+process {
+    foreach ($endpoint in $Uri) {
+        $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+        try {
+            $response = Invoke-WebRequest -Uri $endpoint -Method Head -TimeoutSec $TimeoutSeconds -ErrorAction Stop
+            [pscustomobject]@{
+                Uri          = $endpoint
+                IsReachable  = $true
+                StatusCode   = [int]$response.StatusCode
+                Status       = $response.StatusDescription
+                ElapsedMs    = $stopwatch.ElapsedMilliseconds
+                ErrorMessage = $null
+            }
         }
-        It "Plex is Resolvable" {
-            $plex = Invoke-WebRequest -Uri "https://status.plex.tv/api/v2/status.json"
-            $plex.Status.Description
+        catch {
+            [pscustomobject]@{
+                Uri          = $endpoint
+                IsReachable  = $false
+                StatusCode   = $null
+                Status       = $null
+                ElapsedMs    = $stopwatch.ElapsedMilliseconds
+                ErrorMessage = $_.Exception.Message
+            }
+        }
+        finally {
+            $stopwatch.Stop()
         }
     }
 }

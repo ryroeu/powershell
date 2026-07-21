@@ -1,13 +1,28 @@
 <#
 .SYNOPSIS
-    Retrieves registry key value.
+    Tests whether a registry value equals an expected value.
 #>
 
-# Check Registry Key
-$RegistryKey = Get-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate -Name "WUServer" -ErrorAction Ignore
-if ($RegistryKey -EQ "https://SERVERNAME.DOMAIN.COM:8531") {
-    Write-Host "Registry Key Found"
-}
-else {
-    Write-Host "Registry Key Not Found"
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path,
+
+    [Parameter(Mandatory)]
+    [string]$Name,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [object]$ExpectedValue
+)
+
+$property = Get-ItemProperty -LiteralPath $Path -Name $Name -ErrorAction SilentlyContinue
+$actualValue = if ($property) { $property.$Name } else { $null }
+
+[pscustomobject]@{
+    Path          = $Path
+    Name          = $Name
+    ExpectedValue = $ExpectedValue
+    ActualValue   = $actualValue
+    Matches       = $null -ne $property -and $actualValue -eq $ExpectedValue
 }

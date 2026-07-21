@@ -1,8 +1,19 @@
 <#
 .SYNOPSIS
-    Displays text file.
+    Displays a text file.
 #>
 
-### Display Text File ###
-Get-Content C:\Text.txt
-Read-Host -Prompt "Press Enter to exit"
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+    [Alias('FullName')]
+    [string[]]$Path,
+
+    [switch]$Raw
+)
+
+process {
+    foreach ($item in $Path) {
+        Get-Content -LiteralPath $item -Raw:$Raw
+    }
+}

@@ -1,11 +1,26 @@
 <#
 .SYNOPSIS
-    Retrieves SQL Server version.
+    Retrieves installed SQL Server instance editions and patch levels from the registry.
 #>
 
-$inst = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances
-ForEach ($i in $inst) {
-   $p = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').$i
-   (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").Edition
-   (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$p\Setup").PatchLevel
+[CmdletBinding()]
+param()
+
+$instanceRoot = 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL'
+if (-not (Test-Path -LiteralPath $instanceRoot)) {
+    Write-Verbose 'No 64-bit SQL Server instances were found.'
+    return
+}
+
+$instanceNames = Get-ItemProperty -LiteralPath $instanceRoot
+foreach ($property in $instanceNames.PSObject.Properties.Where({ $_.Name -notmatch '^PS' })) {
+    $setupPath = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$($property.Value)\Setup"
+    $setup = Get-ItemProperty -LiteralPath $setupPath -ErrorAction Stop
+    [pscustomobject]@{
+        InstanceName = $property.Name
+        InstanceId   = $property.Value
+        Edition      = $setup.Edition
+        Version      = $setup.Version
+        PatchLevel   = $setup.PatchLevel
+    }
 }

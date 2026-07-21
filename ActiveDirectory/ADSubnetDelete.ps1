@@ -1,7 +1,16 @@
 <#
 .SYNOPSIS
-    Deletes Active Directory subnet.
+    Deletes an Active Directory replication subnet.
 #>
 
-# Delete AD Subnet
-Remove-ADReplicationSubnet -Identity 10.0.0.0/8
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity
+)
+
+if ($PSCmdlet.ShouldProcess($Identity, 'Delete Active Directory replication subnet')) {
+    Remove-ADReplicationSubnet -Identity $Identity -Confirm:$false
+}

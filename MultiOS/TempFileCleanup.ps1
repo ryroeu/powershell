@@ -6,6 +6,9 @@
 # Cross-platform Temp Cleanup Script
 # Requires PowerShell 6+ (Core)
 
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param()
+
 # This script cleans temporary directories on Windows, Linux, and macOS.
 # It requires elevated privileges (Administrator on Windows, root on Linux/macOS) to function correctly.
 
@@ -37,7 +40,9 @@ function Test-Elevated {
     return $true
 }
 
-function Start-Cleanup {
+function Invoke-TempCleanup {
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+    param()
     # --- Cleanup logic starts here ---
     if ($IsWindows) {
         Write-Output "Detected Windows OS. Cleaning temporary directories..."
@@ -53,7 +58,10 @@ function Start-Cleanup {
                 try {
                     # Recursively remove all files and subdirectories.
                     # The ErrorAction is set to SilentlyContinue to handle files that are in use.
-                    Remove-Item -Path "$path\*" -Recurse -Force -ErrorAction SilentlyContinue
+                    if ($PSCmdlet.ShouldProcess($path, 'Delete temporary directory contents')) {
+                        Get-ChildItem -LiteralPath $path -Force -ErrorAction SilentlyContinue |
+                            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                    }
                     Write-Output "Cleaned: $path"
                 }
                 catch {
@@ -78,7 +86,10 @@ function Start-Cleanup {
                 try {
                     # Recursively remove all files and subdirectories.
                     # This command will skip the directory itself to avoid permissions issues.
-                    Remove-Item -Path "$path/*" -Recurse -Force -ErrorAction SilentlyContinue
+                    if ($PSCmdlet.ShouldProcess($path, 'Delete temporary directory contents')) {
+                        Get-ChildItem -LiteralPath $path -Force -ErrorAction SilentlyContinue |
+                            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                    }
                     Write-Output "Cleaned: $path"
                 }
                 catch {
@@ -97,7 +108,7 @@ function Start-Cleanup {
 
 # Ensure we have elevated privileges before starting the cleanup.
 if (Test-Elevated) {
-    Start-Cleanup
+    Invoke-TempCleanup -WhatIf:$WhatIfPreference -Confirm:$false
 }
 else {
     Write-Host "Exiting script due to insufficient privileges."

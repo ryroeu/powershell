@@ -1,92 +1,48 @@
-﻿<#
+<#
 .SYNOPSIS
-Provides reference snippets for preparing an ADMT migration server and related Active Directory infrastructure.
-
+    Validates and optionally installs local prerequisites for an ADMT migration server.
 .DESCRIPTION
-This file is a working collection of one-off commands used during Active Directory migration planning.
-It is intended as a checklist or reference, not as a single script to run end to end.
+    ADMT installers are not downloaded automatically because Microsoft download URLs and supported platforms change.
+    Supply locally verified installer files and opt into each installation explicitly.
 #>
 
+#Requires -RunAsAdministrator
 
-#################### Set DNS IP Addresses on each DC ####################
-Set-DNSClientServerAddress -InterfaceAlias "Ethernet" -ServerAddress ("10.0.0.1","10.0.0.2")
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$SqlExpressInstaller,
 
+    [string]$AdmtInstaller,
 
-#################### Install AD Module ####################
-Import-Module ActiveDirectory
+    [string]$PesInstallerPath,
 
+    [switch]$InstallSqlExpress,
 
-#################### Create Trust relationship between DCs ####################
-$strRemoteForest = "remoteforestname.com"
-$strRemoteAdmin = "Administrator"
-$strRemoteAdminPassword = "Password"
-$remoteContext = New-Object -TypeName"System.DirectoryServices.ActiveDirectory.DirectoryContext" -ArgumentList @( "Forest",$strRemoteForest, $strRemoteAdmin, $strRemoteAdminPassword)
-try {
-    $remoteForest =[System.DirectoryServices.ActiveDirectory.Forest]::getForest($remoteContext)
-    #Write-Host "GetRemoteForest: Succeeded for domain $($remoteForest)"
+    [switch]$InstallAdmt,
+
+    [switch]$InstallPasswordExportServer
+)
+
+$items = @(
+    @{ Name = 'SQL Server Express'; Path = $SqlExpressInstaller; Install = $InstallSqlExpress; Arguments = @('/quiet') },
+    @{ Name = 'Active Directory Migration Tool'; Path = $AdmtInstaller; Install = $InstallAdmt; Arguments = @('/quiet') },
+    @{ Name = 'Password Export Server'; Path = $PesInstallerPath; Install = $InstallPasswordExportServer; Arguments = @('/qn', '/norestart') }
+)
+
+foreach ($item in $items) {
+    $exists = $item.Path -and (Test-Path -LiteralPath $item.Path -PathType Leaf)
+    [pscustomobject]@{ Prerequisite = $item.Name; InstallerPath = $item.Path; InstallerFound = [bool]$exists; InstallRequested = [bool]$item.Install }
+    if (-not $item.Install) { continue }
+    if (-not $exists) { throw "Installer for '$($item.Name)' was not found at '$($item.Path)'." }
+
+    if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Install $($item.Name)")) {
+        $extension = [IO.Path]::GetExtension($item.Path)
+        $process = if ($extension -eq '.msi') {
+            Start-Process -FilePath msiexec.exe -ArgumentList (@('/i', "`"$($item.Path)`"") + $item.Arguments) -Wait -PassThru
+        }
+        else {
+            Start-Process -FilePath $item.Path -ArgumentList $item.Arguments -Wait -PassThru
+        }
+        if ($process.ExitCode -notin 0, 3010) { throw "$($item.Name) installer failed with exit code $($process.ExitCode)." }
+    }
 }
-catch {
-    Write-Warning "GetRemoteForest: Failed:`n`tError: $($($_.Exception).Message)"
-}
-Write-Host "Connected to Remote forest: $($remoteForest.Name)"
-$localforest=[System.DirectoryServices.ActiveDirectory.Forest]::getCurrentForest()
-Write-Host "Connected to Local forest: $($localforest.Name)"
-try {
-    $localForest.CreateTrustRelationship($remoteForest,"Inbound")
-    Write-Host "CreateTrustRelationship: Succeeded for domain $($remoteForest)"
-}
-catch {
-    Write-Warning "CreateTrustRelationship: Failed for domain$($remoteForest)`n`tError: $($($_.Exception).Message)"
-}
-
-
-#################### Install GP Module ####################
-Import-Module GroupPolicy
-
-
-#################### Set DNS Suffix Search List ####################
-Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters -Name 'NV Domain' -Value ("olddomain.com","newdomain.com")
-
-
-#################### Switch to Downloads Dir ####################
-Set-Location $env:userprofile\Downloads
-
-
-#################### Download and Install SQL Express ####################
-Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=866658" -OutFile $env:userprofile\Downloads
-#Install SQL Server Express
-.\SQL2019-SSEI-Expr.exe
-
-
-#################### Download and Install ADMT ####################
-Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56570" -OutFile $env:userprofile\Downloads
-#Install ADMT
-.\admtsetup32.exe
-
-
-#################### Create Encryption Key ####################
-ADMT key /Option:Create /SourceDomain:domain.com /KeyFile:C:\mykey.pes /KeyPassword:Password
-
-
-#################### Add Administrator to each Domain's Administrators Group ####################
-$User = Get-ADUser -Identity "CN=Chew David,OU=UserAccounts,DC=NORTHAMERICA,DC=FABRIKAM,DC=COM" -Server "northamerica.fabrikam.com"
-$Group = Get-ADGroup -Identity "CN=AccountLeads,OU=UserAccounts,DC=EUROPE,DC=FABRIKAM,DC=COM" -Server "europe.fabrikam.com"
-Add-ADGroupMember -Identity $Group -Members $User -Server "europe.fabrikam.com"
-
-
-#################### Download and Install ADMT Password DLL ####################
-Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=1838" -OutFile $env:userprofile\Downloads
-#install ADMT Password DLL
-msiexec.exe /i .\pwdmig.msi
-
-
-#################### Start Password Export Server Service ####################
-Get-Service -Displayname "Password Export*" | Start-Service
-
-
-#################### Create new OUs on target domain ####################
-New-ADOrganizationalUnit -Name "OldDomainName" -Path "DC=NEWDOMAIN,DC=COM"
-New-ADOrganizationalUnit -Name "Users" -Path "DC=NEWDOMAIN,DC=COM,OU=OLDDOMAINNAME"
-
-
-#Get coffee and reset before commencing migrations

@@ -1,16 +1,17 @@
 <#
 .SYNOPSIS
-    Queries local admin.
+    Tests whether the current Windows identity is a local administrator.
 #>
 
-# Get who I am
-$Me = whoami.exe
-# Get members of administrators group
-$Admins = Get-LocalGroupMember -Name Administrators | Select-Object Name
-# Check to see if this user is an administrator and act accordingly
-if ($Admins -Contains $Me) {
-    Write-Host "$Me is a local administrator" -ForegroundColor Green
-}
-else {
-    Write-Host "$Me is NOT a local administrator" -ForegroundColor Red
+[CmdletBinding()]
+param()
+
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [Security.Principal.WindowsPrincipal]::new($identity)
+$isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+[pscustomobject]@{
+    Identity        = $identity.Name
+    IsAdministrator = $isAdministrator
+    IsElevated      = $isAdministrator
 }

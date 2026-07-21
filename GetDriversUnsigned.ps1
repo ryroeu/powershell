@@ -1,8 +1,11 @@
 <#
 .SYNOPSIS
-    Retrieves drivers unsigned.
+    Retrieves unsigned Plug and Play drivers from Windows.
 #>
 
-### Display Unsigned Drivers ###
-Get-CimInstance -ClassName Win32_PnPSignedDriver | Where-Object {-not $_.IsSigned} | Select-Object DeviceName, Manufacturer, DriverVersion
-Read-Host -Prompt "Press Enter to exit"
+[CmdletBinding()]
+param()
+
+Get-CimInstance -ClassName Win32_PnPSignedDriver |
+    Where-Object IsSigned -eq $false |
+    Select-Object DeviceName, Manufacturer, DriverVersion, DriverDate

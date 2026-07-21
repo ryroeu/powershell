@@ -1,50 +1,45 @@
 <#
 .SYNOPSIS
-    Manages admt port check.
+    Tests the TCP ports commonly required by Active Directory Migration Tool operations.
 #>
 
-function Get-PortQry {
-    # Download PortQry utility
-    Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=17148 -OutFile ./PortQryV2.exe
-    # Extract package
-    Start-Process -Wait -FilePath ./PortQryv2.exe -ArgumentList '/q' -PassThru
-}
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Target,
 
-function Get-ADMTPortStatus {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$Target
-    )
-    # Test ports
-    $ports = @(53, 88, 135, 137, 138, 389, 445, 3268)
-    foreach ($port in $ports) {
-        try {
-            .\portqry -n $Target -p tcp -e $port -l C:\Temp\PortScan$port.txt -y
-        } catch {
-            Write-Error "Failed to scan port ${port}: $_"
+    [ValidateRange(1, 65535)]
+    [int[]]$Port = @(53, 88, 135, 389, 445, 636, 3268, 3269),
+
+    [ValidateRange(100, 60000)]
+    [int]$TimeoutMilliseconds = 3000
+)
+
+foreach ($number in $Port) {
+    $client = [Net.Sockets.TcpClient]::new()
+    $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+    try {
+        $task = $client.ConnectAsync($Target, $number)
+        $connected = $task.Wait($TimeoutMilliseconds) -and $client.Connected
+        [pscustomobject]@{
+            Target    = $Target
+            Protocol  = 'TCP'
+            Port      = $number
+            Reachable = $connected
+            ElapsedMs = $stopwatch.ElapsedMilliseconds
         }
     }
-}
-
-function Show-FilteredPorts {
-    # Create Directory
-    if (-not (Test-Path C:\Temp)) {
-        New-Item -Path C:\Temp -ItemType Directory
+    catch {
+        [pscustomobject]@{
+            Target    = $Target
+            Protocol  = 'TCP'
+            Port      = $number
+            Reachable = $false
+            ElapsedMs = $stopwatch.ElapsedMilliseconds
+        }
     }
-    $Logs = (Get-ChildItem -Path C:\Temp\ -Filter "PortScan*").Name
-    foreach ($Log in $Logs) {
-        Get-Content -Path C:\Temp\$Log | Select-Object -First 23 | Select-Object -Last 1 
+    finally {
+        $stopwatch.Stop()
+        $client.Dispose()
     }
 }
-
-# Ensure PortQry is installed
-Get-PortQry
-
-# Set target IP address
-$Target = "8.8.8.8"
-
-# Perform port scans
-Get-ADMTPortStatus -Target $Target
-
-# Show results
-Show-FilteredPorts

@@ -258,7 +258,7 @@ function Invoke-InteractiveNativeCommand {
     }
 }
 
-function New-VpnResult {
+function ConvertTo-VpnResult {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Platform,
@@ -345,10 +345,10 @@ function Connect-WithRasDial {
         Write-Warning "rasdial reported success, but the active connection list did not clearly show '$VpnProfileName'."
     }
 
-    return New-VpnResult -Platform 'Windows' -Backend 'RasDial' -ProfileName $VpnProfileName -Connected $connected -Status ($(if ($connected) { 'Connected' } else { 'Started' }))
+    return ConvertTo-VpnResult -Platform 'Windows' -Backend 'RasDial' -ProfileName $VpnProfileName -Connected $connected -Status ($(if ($connected) { 'Connected' } else { 'Started' }))
 }
 
-function Get-ScutilServiceNames {
+function Get-ScutilServiceName {
     $listResult = Invoke-NativeCommand -CommandName 'scutil' -ArgumentList @('--nc', 'list')
     if ($listResult.ExitCode -ne 0) {
         throw "Unable to enumerate macOS VPN services. scutil exited with code $($listResult.ExitCode)."
@@ -391,7 +391,7 @@ function Connect-WithScutil {
 
     $null = Assert-NativeCommand -CommandName 'scutil'
 
-    $serviceNames = Get-ScutilServiceNames
+    $serviceNames = Get-ScutilServiceName
     if ($serviceNames -notcontains $VpnProfileName) {
         throw "VPN service '$VpnProfileName' was not found in macOS network connection services."
     }
@@ -417,7 +417,7 @@ function Connect-WithScutil {
         Write-Warning "macOS reported VPN status '$status' for '$VpnProfileName'."
     }
 
-    return New-VpnResult -Platform 'MacOS' -Backend 'Scutil' -ProfileName $VpnProfileName -Connected $connected -Status $status
+    return ConvertTo-VpnResult -Platform 'MacOS' -Backend 'Scutil' -ProfileName $VpnProfileName -Connected $connected -Status $status
 }
 
 function Connect-WithNmcli {
@@ -459,7 +459,7 @@ function Connect-WithNmcli {
         Write-Warning "nmcli reported success, but '$VpnProfileName' was not listed as an active connection."
     }
 
-    return New-VpnResult -Platform 'Linux' -Backend 'Nmcli' -ProfileName $VpnProfileName -Connected $connected -Status ($(if ($connected) { 'Connected' } else { 'Started' }))
+    return ConvertTo-VpnResult -Platform 'Linux' -Backend 'Nmcli' -ProfileName $VpnProfileName -Connected $connected -Status ($(if ($connected) { 'Connected' } else { 'Started' }))
 }
 
 function Connect-WithOpenConnect {
@@ -497,7 +497,7 @@ function Connect-WithOpenConnect {
         }
 
         Write-Host 'openconnect exited cleanly and the session has ended.'
-        return New-VpnResult -Platform (Get-DetectedPlatform) -Backend 'OpenConnect' -ProfileName $ProfileOrServerName -Connected $false -Status 'SessionEnded'
+        return ConvertTo-VpnResult -Platform (Get-DetectedPlatform) -Backend 'OpenConnect' -ProfileName $ProfileOrServerName -Connected $false -Status 'SessionEnded'
     }
     finally {
         Clear-Variable plainPassword -ErrorAction SilentlyContinue

@@ -1,9 +1,25 @@
 <#
 .SYNOPSIS
-    Creates new text file.
+    Creates or replaces a UTF-8 text file.
 #>
 
-### Create New Text File and Add Content ###
-New-Item C:\NewItemFile.txt -Type file
-Set-Content C:\NewItemFile.txt "Enter your text here..."
-Add-Content C:\NewItemFile.txt "Enter second line of text here..."
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string[]]$Content,
+
+    [switch]$Force
+)
+
+if ((Test-Path -LiteralPath $Path) -and -not $Force) {
+    throw "The file '$Path' already exists. Use -Force to replace it."
+}
+
+if ($PSCmdlet.ShouldProcess($Path, 'Create text file')) {
+    Set-Content -LiteralPath $Path -Value $Content -Encoding utf8 -Force:$Force
+    Get-Item -LiteralPath $Path
+}

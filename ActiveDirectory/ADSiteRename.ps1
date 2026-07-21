@@ -75,7 +75,7 @@ try {
     throw "An Active Directory site named '$NewName' already exists."
 }
 catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException] {
-    # Expected when the destination name is available.
+    Write-Verbose "The destination name '$NewName' is available."
 }
 
 $target = $site.DistinguishedName

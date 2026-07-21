@@ -1,15 +1,22 @@
 <#
 .SYNOPSIS
-    Creates self signed cert.
+    Creates a self-signed certificate in a Windows certificate store.
 #>
 
-Import-Module -Name PKI
-$define = @{
-    FriendlyName = 'PowerShell Automation'
-    NotBefore = Get-Date
-    NotAfter = ((Get-Date).AddYears(2))
-    DnsName = 'PSautomate.domain.com'
-    Subject = 'PSautomate.domain.com'
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string[]]$DnsName,
+
+    [string]$FriendlyName = 'PowerShell Automation',
+
+    [ValidateRange(1, 120)]
+    [int]$ValidMonths = 24,
+
+    [string]$CertStoreLocation = 'Cert:\LocalMachine\My'
+)
+
+$subject = 'CN={0}' -f $DnsName[0]
+if ($PSCmdlet.ShouldProcess($subject, "Create self-signed certificate in '$CertStoreLocation'")) {
+    New-SelfSignedCertificate -DnsName $DnsName -Subject $subject -FriendlyName $FriendlyName -NotAfter (Get-Date).AddMonths($ValidMonths) -CertStoreLocation $CertStoreLocation
 }
-$cert = New-SelfSignedCertificate $define
-$cert | Format-List

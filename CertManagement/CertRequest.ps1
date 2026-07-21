@@ -1,12 +1,26 @@
-﻿<#
+<#
 .SYNOPSIS
-Requests and installs a web server certificate from an enrollment service by using the SslWebServer template.
-
-This example submits a certificate request for the SslWebServer template to the specific URL using the user name and password credentials.
-The request will have two DNS names in it.
-This is for a certificate in the machine store.
-If the request is issued, then the returned certificate is installed in the machine MY store and the certificate in the EnrollmentResult structure is returned with the status Issued.
-If the request is made pending, then the request is installed in the machine REQUEST store and the request in the EnrollmentResult structure is returned with the status Pending.
+    Requests a certificate from an Active Directory Certificate Services enrollment endpoint.
 #>
-$PSCredential = Get-Credential
-Get-Certificate -Template SslWebServer -DnsName www.contoso.com,www.fabrikam.com -Url https://www.contoso.com/Policy/service.svc -Credential $PSCredential -CertStoreLocation cert:\LocalMachine\My
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Template,
+
+    [Parameter(Mandatory)]
+    [string[]]$DnsName,
+
+    [uri]$Url,
+
+    [pscredential]$Credential,
+
+    [string]$CertStoreLocation = 'Cert:\LocalMachine\My'
+)
+
+$parameters = @{ Template = $Template; DnsName = $DnsName; CertStoreLocation = $CertStoreLocation }
+if ($Url) { $parameters.Url = $Url }
+if ($Credential) { $parameters.Credential = $Credential }
+if ($PSCmdlet.ShouldProcess(($DnsName -join ', '), "Request certificate using template '$Template'")) {
+    Get-Certificate @parameters
+}

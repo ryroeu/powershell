@@ -1,18 +1,34 @@
 <#
 .SYNOPSIS
-    Cleans up ADMT.
+    Removes ADMT agent remnants from a Windows computer.
 #>
 
-Import-Module Microsoft.PowerShell.Management
+#Requires -RunAsAdministrator
 
-Write-Host "Stopping ADMT Agent.." -ForegroundColor Magenta
-Stop-Process -Name "admagnt" -Confirm:$false -Force
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$ServiceName = 'OnePointDomainAgent',
 
-Write-Host "Removing ADMT Service.." -ForegroundColor Magenta
-Remove-Service -Name "OnePointdomainAgent" -Confirm:$false -Force
+    [string]$ProcessName = 'admagnt',
 
-Write-Host "Removng Registry SubKey.." -ForegroundColor Magenta
-Remove-Item HKLM:\Software\Microsoft\ADMT -Recurse -Confirm:$false -Force
+    [string]$InstallPath = 'C:\Windows\ADMT',
 
-Write-Host "Removing ADMT Directory.." -ForegroundColor Magenta
-Remove-Item C:\Windows\ADMT -Recurse -Confirm:$false -Force
+    [string]$RegistryPath = 'HKLM:\Software\Microsoft\ADMT'
+)
+
+Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | ForEach-Object {
+    if ($PSCmdlet.ShouldProcess($_.Id, "Stop process '$ProcessName'")) { $_ | Stop-Process -Force }
+}
+
+$service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+if ($service -and $PSCmdlet.ShouldProcess($ServiceName, 'Stop and remove ADMT agent service')) {
+    if ($service.Status -ne 'Stopped') { Stop-Service -Name $ServiceName -Force }
+    & "$env:SystemRoot\System32\sc.exe" delete $ServiceName | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "sc.exe failed with exit code $LASTEXITCODE." }
+}
+
+foreach ($path in $RegistryPath, $InstallPath) {
+    if ((Test-Path -LiteralPath $path) -and $PSCmdlet.ShouldProcess($path, 'Remove ADMT remnant')) {
+        Remove-Item -LiteralPath $path -Recurse -Force
+    }
+}

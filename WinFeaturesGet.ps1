@@ -1,6 +1,25 @@
 <#
 .SYNOPSIS
-    Retrieves Windows features.
+    Retrieves Windows Server feature status and optionally exports it to CSV.
 #>
 
-Get-WindowsFeature -Name PowerShell* | Format-Table | Export-Csv .\windowsfeaturestatus.csv -Append
+[CmdletBinding()]
+param(
+    [string[]]$Name = '*',
+
+    [string]$ComputerName,
+
+    [string]$OutputPath
+)
+
+$parameters = @{ Name = $Name }
+if ($ComputerName) {
+    $parameters.ComputerName = $ComputerName
+}
+$features = Get-WindowsFeature @parameters |
+    Select-Object Name, DisplayName, Installed, InstallState, FeatureType
+
+if ($OutputPath) {
+    $features | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8
+}
+$features

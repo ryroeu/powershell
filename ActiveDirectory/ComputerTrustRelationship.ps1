@@ -1,9 +1,27 @@
 <#
 .SYNOPSIS
-    Manages computer trust relationship.
+    Tests and optionally repairs the local computer's domain secure channel.
 #>
 
-### Test and Repair Trust Relationship ###
-Test-ComputerSecureChannel -Server "domain.com" `
-                           -Repair `
-                           -Verbose
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$Server,
+
+    [pscredential]$Credential,
+
+    [switch]$Repair
+)
+
+$parameters = @{}
+if ($Server) { $parameters.Server = $Server }
+if ($Credential) { $parameters.Credential = $Credential }
+if ($Repair) {
+    if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, 'Repair domain secure channel')) {
+        Test-ComputerSecureChannel @parameters -Repair -Verbose
+    }
+}
+else {
+    Test-ComputerSecureChannel @parameters -Verbose
+}

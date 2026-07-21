@@ -1,7 +1,24 @@
 <#
 .SYNOPSIS
-    Manages active directory site description.
+    Sets an Active Directory replication site description.
 #>
 
-# Change OU Description
-Set-ADReplicationSite -Identity "CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=Lucernpub,DC=com" -Description "New description here”
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Description,
+
+    [string]$Server
+)
+
+$parameters = @{ Identity = $Identity; Description = $Description }
+if ($Server) { $parameters.Server = $Server }
+if ($PSCmdlet.ShouldProcess($Identity, "Set site description to '$Description'")) {
+    Set-ADReplicationSite @parameters -PassThru
+}

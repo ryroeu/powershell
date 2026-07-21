@@ -1,39 +1,28 @@
 <#
 .SYNOPSIS
-    Manages cert get expired windows.
+    Lists expired certificates from Windows certificate stores.
 #>
 
-# Get the current date once for comparison
-$CurrentDate = Get-Date
+[CmdletBinding()]
+param(
+    [ValidateSet('CurrentUser', 'LocalMachine')]
+    [string[]]$StoreLocation = @('CurrentUser', 'LocalMachine'),
 
-# --- Find Expired Certificates in LocalMachine Store ---
-Write-Host "Checking LocalMachine certificate store..." -ForegroundColor Yellow
+    [string[]]$StoreName = @('*'),
 
-# Get certificates, filter for expired ones, and select specific properties
-$ExpiredCertsLocalMachine = Get-ChildItem -Path Cert:\LocalMachine\ -Recurse | Where-Object { $_.NotAfter -lt $CurrentDate } | Select-Object -Property Subject, Thumbprint, NotAfter, @{Name='Store';Expression={'LocalMachine'}}
+    [datetime]$AsOf = (Get-Date)
+)
 
-# Output the results, if any
-if ($ExpiredCertsLocalMachine) {
-    Write-Host "Found expired certificates in LocalMachine:" -ForegroundColor Red
-    $ExpiredCertsLocalMachine | Format-Table -AutoSize
-} else {
-    Write-Host "No expired certificates found in LocalMachine." -ForegroundColor Green
+if (-not $IsWindows) {
+    throw 'This script requires the Windows certificate provider.'
 }
 
-# --- (Optional) Find Expired Certificates in CurrentUser Store ---
-# Uncomment the following block if you want to check the CurrentUser store as well
-
-# Write-Host "`nChecking CurrentUser certificate store..." -ForegroundColor Yellow
-# $ExpiredCertsCurrentUser = Get-ChildItem -Path Cert:\CurrentUser\ -Recurse | Where-Object { $_.NotAfter -lt $CurrentDate } | Select-Object -Property Subject, Thumbprint, NotAfter, @{Name='Store';Expression={'CurrentUser'}}
-#
-# if ($ExpiredCertsCurrentUser) {
-#     Write-Host "Found expired certificates in CurrentUser:" -ForegroundColor Red
-#     $ExpiredCertsCurrentUser | Format-Table -AutoSize
-# } else {
-#     Write-Host "No expired certificates found in CurrentUser." -ForegroundColor Green
-# }
-
-# --- End ---
-
-# Keep the window open if run directly
-Read-Host -Prompt "Press Enter to exit"
+foreach ($location in $StoreLocation) {
+    foreach ($name in $StoreName) {
+        Get-ChildItem -Path "Cert:\$location\$name" -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.PSIsContainer -ne $true -and $_.NotAfter -lt $AsOf } |
+            Select-Object @{ Name = 'StoreLocation'; Expression = { $location } },
+            @{ Name = 'StoreName'; Expression = { $_.PSParentPath -replace '^.*Certificate::', '' } },
+            Subject, Thumbprint, NotBefore, NotAfter, HasPrivateKey
+    }
+}

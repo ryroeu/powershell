@@ -53,14 +53,19 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Get-Adapter {
-  $adapters = Get-NetAdapter -Physical:$(!$IncludeVirtual) -ErrorAction SilentlyContinue |
+  param(
+    [string[]]$NamePattern,
+    [bool]$IncludeVirtualAdapter
+  )
+
+  $adapters = Get-NetAdapter -Physical:(-not $IncludeVirtualAdapter) -ErrorAction SilentlyContinue |
               Where-Object { $_.Status -eq 'Up' }
-  if (-not $adapters -and -not $IncludeVirtual) {
+  if (-not $adapters -and -not $IncludeVirtualAdapter) {
     # Fallback: include virtual if no physical adapters are up
     $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
   }
-  if ($InterfaceName) {
-    $patterns = $InterfaceName
+  if ($NamePattern) {
+    $patterns = $NamePattern
     $adapters = $adapters | Where-Object {
       $name = $_.Name
       foreach ($p in $patterns) { if ($name -like $p) { return $true } }
@@ -84,7 +89,7 @@ function Get-Stat {
 }
 
 # --- Collect samples ---
-$adapters = Get-Adapters
+$adapters = Get-Adapter -NamePattern $InterfaceName -IncludeVirtualAdapter $IncludeVirtual
 if (-not $adapters) { throw "No active adapters found. Try -IncludeVirtual or specify -InterfaceName." }
 
 $names = $adapters.Name | Sort-Object -Unique
@@ -98,12 +103,12 @@ $sampleCount = [math]::Floor($DurationSeconds / $IntervalSeconds) + 1
 if ($sampleCount -lt 2) { $sampleCount = 2 }
 
 $allSamples = New-Object System.Collections.Generic.List[object]
-$first = Get-Stats -Names $names
+$first = Get-Stat -Names $names
 $allSamples.AddRange($first)
 
 for ($i = 1; $i -lt $sampleCount; $i++) {
   Start-Sleep -Seconds $IntervalSeconds
-  $s = Get-Stats -Names $names
+  $s = Get-Stat -Names $names
   $allSamples.AddRange($s)
 }
 

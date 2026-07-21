@@ -1,13 +1,20 @@
 <#
 .SYNOPSIS
-    Manages active directory users password expired.
+    Retrieves Active Directory users with expired passwords.
 #>
 
-### Export Users with Expired Passwords to CSV ###
-Search-AdAccount -UsersOnly `
-                 -PasswordExpired | Select-Object -Property SAMaccountname, `
-                                                            Enabled, `
-                                                            PasswordExpired, `
-                                                            PasswordNeverExpires, `
-                                                            LastLogonDate `
-                                  | Export-Csv -Path C:\ExportDir\PWExpired.csv -NoTypeInformation
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$SearchBase,
+
+    [string]$OutputPath
+)
+
+$parameters = @{ UsersOnly = $true; PasswordExpired = $true }
+if ($SearchBase) { $parameters.SearchBase = $SearchBase }
+$users = Search-ADAccount @parameters |
+    Select-Object SamAccountName, Enabled, PasswordExpired, PasswordNeverExpires, LastLogonDate, DistinguishedName
+if ($OutputPath) { $users | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
+$users

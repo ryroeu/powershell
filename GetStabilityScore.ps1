@@ -1,28 +1,27 @@
 <#
 .SYNOPSIS
-    Retrieves stability score.
+    Summarizes the Windows Reliability Monitor stability index.
 #>
 
 [CmdletBinding()]
-param (
-    # Number of System Stability Indexes to return (generated hourly)
-    [UInt32]$Count = (24 * 7 * 4) #-Four week rolling window
+param(
+    [ValidateRange(1, 10000)]
+    [int]$Count = 672
 )
 
-# Gather $Count worth of ReliabilityStabilityMetrics
-$StabilityMetrics = Get-CimInstance -ClassName Win32_ReliabilityStabilityMetrics | Select-Object -First $Count
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+$metrics = @(Get-CimInstance -ClassName Win32_ReliabilityStabilityMetrics -ErrorAction Stop |
+        Sort-Object TimeGenerated -Descending |
+        Select-Object -First $Count)
+if (-not $metrics) { throw 'No reliability stability metrics were returned.' }
 
-# Generate Min/Max/Average stability for our collected window.
-$StabilityStats = $StabilityMetrics | Measure-Object -Average -Maximum -Minimum -Property SystemStabilityIndex
-
-# Get the most recent stability and when it was generated
-$LastStabitiyMetric = $StabilityMetrics | Select-Object -First 1 -Property SystemStabilityIndex, TimeGenerated
-
-# Output the collected data
-[PSCustomObject]@{
-    Minimum = [math]::Round($StabilityStats.Minimum)
-    Average = [math]::Round($StabilityStats.Average, 2) #round to two decimal places for sanity
-    Maximum = [math]::Round($StabilityStats.Maximum)
-    Last = $LastStabitiyMetric.SystemStabilityIndex
-    LastDate = [DateTime]$LastStabitiyMetric.TimeGenerated
+$statistics = $metrics | Measure-Object -Property SystemStabilityIndex -Average -Maximum -Minimum
+$latest = $metrics[0]
+[pscustomobject]@{
+    SampleCount = $metrics.Count
+    Minimum     = [Math]::Round($statistics.Minimum, 2)
+    Average     = [Math]::Round($statistics.Average, 2)
+    Maximum     = [Math]::Round($statistics.Maximum, 2)
+    Latest      = $latest.SystemStabilityIndex
+    LatestDate  = [datetime]$latest.TimeGenerated
 }

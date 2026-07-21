@@ -126,7 +126,8 @@ begin {
   function Test-Http {
     param([string]$Address,[int]$Port,[string]$Path='/',[int]$TimeoutMs=1500)
     try {
-      $uri = [uri]::new(("http://{0}:{1}{2}" -f $Address,$Port, (if ($Path.StartsWith('/')){$Path}else{"/$Path"})))
+      $normalizedPath = if ($Path.StartsWith('/')) { $Path } else { "/$Path" }
+      $uri = [uri]::new(("http://{0}:{1}{2}" -f $Address, $Port, $normalizedPath))
       $h = [System.Net.Http.HttpClient]::new()
       $h.Timeout = [TimeSpan]::FromMilliseconds($TimeoutMs)
       $resp = $h.GetAsync($uri).GetAwaiter().GetResult()

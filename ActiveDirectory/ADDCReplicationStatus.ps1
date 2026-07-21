@@ -1,9 +1,25 @@
 <#
 .SYNOPSIS
-    Manages active directory domain controller replication status.
+    Retrieves Active Directory replication partner status and optionally starts synchronization.
 #>
 
-function Get-LastDCReplicationSuccess {
-(Get-ADDomainController -Filter *).Name | Foreach-Object {repadmin /syncall $_ (Get-ADDomain).DistinguishedName /e /A | Out-Null}; Start-Sleep 10; Get-ADReplicationPartnerMetadata -Target "$env:userdnsdomain" -Scope Domain | Select-Object Server, LastReplicationSuccess
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$Target = (Get-ADDomain).DNSRoot,
+
+    [switch]$Synchronize
+)
+
+if ($Synchronize) {
+    foreach ($controller in Get-ADDomainController -Filter *) {
+        if ($PSCmdlet.ShouldProcess($controller.HostName, 'Synchronize all directory partitions')) {
+            & repadmin.exe /syncall $controller.HostName /A /e /P | Out-Null
+            if ($LASTEXITCODE -ne 0) { Write-Warning "Repadmin failed for '$($controller.HostName)' with exit code $LASTEXITCODE." }
+        }
+    }
 }
-Get-LastDCReplicationSuccess
+
+Get-ADReplicationPartnerMetadata -Target $Target -Scope Domain |
+    Select-Object Server, Partner, Partition, LastReplicationAttempt, LastReplicationSuccess, LastReplicationResult, ConsecutiveReplicationFailures

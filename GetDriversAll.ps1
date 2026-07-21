@@ -1,8 +1,10 @@
 <#
 .SYNOPSIS
-    Retrieves drivers all.
+    Retrieves signed Plug and Play driver information from Windows.
 #>
 
-### Display Driver Information ###
-Get-CimInstance -ClassName Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion, IsSigned, Signer
-Read-Host -Prompt "Press Enter to exit"
+[CmdletBinding()]
+param()
+
+Get-CimInstance -ClassName Win32_PnPSignedDriver |
+    Select-Object DeviceName, Manufacturer, DriverVersion, DriverDate, IsSigned, Signer

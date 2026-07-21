@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $crid = (New-Guid).Guid
 $base = "https://endpoints.office.com"
 
-$version = Invoke-RestMethod "$base/version/worldwide?clientrequestid=$crid"
+$null = Invoke-RestMethod "$base/version/worldwide?clientrequestid=$crid"
 $data    = Invoke-RestMethod "$base/endpoints/worldwide?clientrequestid=$crid"
 
 if ($Category -ne 'All') {
@@ -46,4 +46,3 @@ if ($OutCsv) {
   Write-Host "Exported -> $OutCsv" -ForegroundColor Green
 }
 Write-Host "Done." -ForegroundColor Green
-Disconnect-MgGraph -Confirm:$false

@@ -1,7 +1,21 @@
 <#
 .SYNOPSIS
-    Seizes FSMO roles.
+    Seizes selected FSMO roles on a domain controller.
+.DESCRIPTION
+    Only use seizure when the previous role holder will never return to the domain.
 #>
 
-# Move roles to this DC
-Move-ADDirectoryServerOperationMasterRole -Identity NewMaster.domain.com -OperationMasterRole SchemaMaster,DomainNamingMaster,PDCEmulator,RIDMaster,InfrastructureMaster -Force
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [ValidateSet('SchemaMaster', 'DomainNamingMaster', 'PDCEmulator', 'RIDMaster', 'InfrastructureMaster')]
+    [string[]]$Role = @('SchemaMaster', 'DomainNamingMaster', 'PDCEmulator', 'RIDMaster', 'InfrastructureMaster')
+)
+
+if ($PSCmdlet.ShouldProcess($Identity, "Seize FSMO roles: $($Role -join ', ')")) {
+    Move-ADDirectoryServerOperationMasterRole -Identity $Identity -OperationMasterRole $Role -Force -Confirm:$false -PassThru
+}

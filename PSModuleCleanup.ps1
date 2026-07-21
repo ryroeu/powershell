@@ -1,23 +1,26 @@
 <#
 .SYNOPSIS
-    Cleans up PowerShell module.
+    Removes superseded versions of modules installed by PowerShellGet.
 #>
 
-### Remove old versions of PS Modules
-$Mods = Get-Module -ListAvailable
-foreach ($Mod in $Mods){
-    Write-Host "Checking $($mod.name)"
-    $latest = Get-InstalledModule $mod.name
-    $specificmods = Get-InstalledModule $mod.name -AllVersions
-    Write-Host "$($specificmods.count) versions of this module found [ $($mod.name) ]"
-    foreach ($sm in $specificmods){
-        if ($sm.version -ne $latest.version){
-	        Write-Host "Currently uninstalling $($sm.name) - $($sm.version) [latest is $($latest.version)]"
-	        $sm | Uninstall-Module -Force
-	        Write-Host "Finished uninstalling $($sm.name) - $($sm.version)"
-            Write-Host "    --------"
-	    }
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string[]]$Name = '*'
+)
+
+$installed = @(Get-InstalledModule -Name $Name -AllVersions -ErrorAction SilentlyContinue)
+foreach ($group in $installed | Group-Object Name) {
+    $versions = @($group.Group | Sort-Object Version -Descending)
+    if ($versions.Count -le 1) {
+        Write-Verbose "Only one installed version of '$($group.Name)' was found."
+        continue
     }
-    Write-Host "------------------------"
+
+    $latest = $versions[0]
+    foreach ($oldModule in $versions | Select-Object -Skip 1) {
+        $target = "$($oldModule.Name) $($oldModule.Version)"
+        if ($PSCmdlet.ShouldProcess($target, "Uninstall superseded module; keeping $($latest.Version)")) {
+            Uninstall-Module -Name $oldModule.Name -RequiredVersion $oldModule.Version -Force -ErrorAction Stop
+        }
+    }
 }
-Write-Host "REMOVAL COMPLETE"

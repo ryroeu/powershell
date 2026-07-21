@@ -1,7 +1,22 @@
 <#
 .SYNOPSIS
-    Manages filename change.
+    Replaces characters in filenames in a directory.
 #>
 
-# Replace Characters in Filename inside working Directory
-Get-ChildItem | Rename-Item –NewName {$_.Name –Replace " ","_"}
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [string]$Path = $PWD,
+
+    [string]$Pattern = ' ',
+
+    [string]$Replacement = '_',
+
+    [switch]$Recurse
+)
+
+foreach ($file in Get-ChildItem -LiteralPath $Path -File -Recurse:$Recurse | Where-Object Name -Match $Pattern) {
+    $newName = $file.Name -replace $Pattern, $Replacement
+    if ($PSCmdlet.ShouldProcess($file.FullName, "Rename to '$newName'")) {
+        Rename-Item -LiteralPath $file.FullName -NewName $newName
+    }
+}

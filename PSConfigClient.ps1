@@ -5,7 +5,7 @@
     Manages powershell config client.
 #>
 
-[CmdletBinding(SupportsShouldProcess = $true)]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [string[]]$TrustedHosts,
 
@@ -17,8 +17,9 @@ param(
     [string]$ExecutionPolicy = 'DoNotChange'
 )
 
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+
 if ($PSCmdlet.ShouldProcess('WinRM', 'Enable PowerShell remoting on this client')) {
-    Set-WSManQuickConfig -Force | Out-Null
     Enable-PSRemoting -Force -SkipNetworkProfileCheck
 }
 

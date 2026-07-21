@@ -5,12 +5,14 @@
 
 [CmdletBinding()]
 param(
+    [string]$ComputerName = $env:COMPUTERNAME,
+
     [string]$OutputPath = (Join-Path -Path $PWD -ChildPath 'DNSRecords.csv'),
     [switch]$ShowGridView
 )
 
-$results = foreach ($zone in Get-DnsServerZone) {
-    foreach ($record in Get-DnsServerResourceRecord -ZoneName $zone.ZoneName) {
+$results = foreach ($zone in Get-DnsServerZone -ComputerName $ComputerName) {
+    foreach ($record in Get-DnsServerResourceRecord -ComputerName $ComputerName -ZoneName $zone.ZoneName) {
         [pscustomobject]@{
             ZoneName   = $zone.ZoneName
             HostName   = $record.HostName
@@ -29,5 +31,5 @@ if ($ShowGridView) {
     }
 }
 
-$results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+$results | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8NoBOM
 $results

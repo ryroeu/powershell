@@ -1,26 +1,34 @@
 <#
 .SYNOPSIS
-Calculates a file hash and searches a directory for other files with the same hash value.
+    Finds files whose cryptographic hash matches a reference file.
 #>
 
-#### GET THE HASH OF A FILE YOU WANT TO COMPARE
-# Specify the path to the file
-$filePath = "/Documents/ISO/filename.iso"
-# Calculate the hash
-$fileHashBase = Get-FileHash -Path $filePath -Algorithm SHA256
-# Print the hash
-$hash = $fileHashBase.hash
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$ReferencePath,
 
+    [Parameter(Mandatory)]
+    [string]$SearchPath,
 
-#### GET THE HASH OF ALL FILES IN A DIRECTORY YOU WANT TO SEARCH
-# Specify the path to the directory
-$dirPath = "/Documents/ISO"
-# Get all files in the directory
-$files = Get-ChildItem -Path $dirPath -File
-# Calculate and print the hash for each file
-foreach ($file in $files) {
-    $fileHash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-    if ($fileHash.hash -eq $hash) {
-        Write-Output "Duplicate file found: $($file.Name), Hash: $($fileHash.Hash)"
+    [ValidateSet('SHA1', 'SHA256', 'SHA384', 'SHA512', 'MD5')]
+    [string]$Algorithm = 'SHA256',
+
+    [switch]$Recurse
+)
+
+$reference = Get-Item -LiteralPath $ReferencePath -ErrorAction Stop
+$referenceHash = (Get-FileHash -LiteralPath $reference.FullName -Algorithm $Algorithm).Hash
+
+Get-ChildItem -LiteralPath $SearchPath -File -Recurse:$Recurse |
+    Where-Object FullName -ne $reference.FullName |
+    ForEach-Object {
+        $candidateHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm $Algorithm).Hash
+        if ($candidateHash -eq $referenceHash) {
+            [pscustomobject]@{
+                Path      = $_.FullName
+                Algorithm = $Algorithm
+                Hash      = $candidateHash
+            }
+        }
     }
-}

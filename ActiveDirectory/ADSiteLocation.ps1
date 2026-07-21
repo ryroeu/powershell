@@ -1,7 +1,24 @@
 <#
 .SYNOPSIS
-    Manages active directory site location.
+    Sets an Active Directory replication site location.
 #>
 
-# Change Site Location
-Set-ADReplicationSite "CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=Lucernpub,DC=com" -Location "New location here”
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Location,
+
+    [string]$Server
+)
+
+$parameters = @{ Identity = $Identity; Location = $Location }
+if ($Server) { $parameters.Server = $Server }
+if ($PSCmdlet.ShouldProcess($Identity, "Set site location to '$Location'")) {
+    Set-ADReplicationSite @parameters -PassThru
+}

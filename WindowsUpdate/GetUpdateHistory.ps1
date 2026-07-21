@@ -1,7 +1,19 @@
 <#
 .SYNOPSIS
-    Retrieves update history.
+    Retrieves installed Windows updates without relying on the removed WMIC utility.
 #>
 
-# Get Installed Updates
-wmic qfe list #| Add-Content -path C:\Temp\InstalledUpdates.txt -Force
+[CmdletBinding()]
+param(
+    [string[]]$ComputerName,
+
+    [string]$OutputPath
+)
+
+$parameters = @{}
+if ($ComputerName) { $parameters.ComputerName = $ComputerName }
+$updates = Get-HotFix @parameters | Sort-Object InstalledOn -Descending
+if ($OutputPath) {
+    $updates | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8
+}
+$updates

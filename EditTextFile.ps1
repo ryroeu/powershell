@@ -1,8 +1,36 @@
 <#
 .SYNOPSIS
-    Edits text file.
+    Replaces matching text in a text file.
 #>
 
-$line = Get-Content c:\filename.txt | Select-String "beginning text of line to be edited" | Select-Object -ExpandProperty Line
-$content = Get-Content c:\filename.txt
-$content | ForEach-Object {$_ -replace $line,"new text for line"} | Set-Content c:\filename.txt
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path,
+
+    [Parameter(Mandatory)]
+    [string]$Pattern,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Replacement,
+
+    [switch]$SimpleMatch
+)
+
+$content = Get-Content -LiteralPath $Path -Raw
+$updated = if ($SimpleMatch) {
+    $content.Replace($Pattern, $Replacement)
+}
+else {
+    $content -replace $Pattern, $Replacement
+}
+
+if ($content -ceq $updated) {
+    Write-Verbose 'No matching text was found.'
+    return
+}
+
+if ($PSCmdlet.ShouldProcess($Path, "Replace text matching '$Pattern'")) {
+    Set-Content -LiteralPath $Path -Value $updated -Encoding utf8 -NoNewline
+}

@@ -1,11 +1,16 @@
 <#
 .SYNOPSIS
-    Manages active directory locked accounts.
+    Retrieves currently locked Active Directory user accounts.
 #>
 
-$properties = @(
-    'TimeCreated',
-    @{n='Account Name';e={$_.Properties[0].Value}},
-    @{n='Caller Computer Name';e={$_.Properties[1].Value}}
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$SearchBase
 )
-Get-WinEvent -FilterHashTable @{LogName='Security'; ID=4740} | Select-Object $properties
+
+$parameters = @{ UsersOnly = $true; LockedOut = $true }
+if ($SearchBase) { $parameters.SearchBase = $SearchBase }
+Search-ADAccount @parameters |
+    Select-Object Name, SamAccountName, LockedOut, LastLogonDate, DistinguishedName

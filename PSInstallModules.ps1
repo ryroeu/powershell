@@ -1,66 +1,64 @@
 <#
 .SYNOPSIS
-    Installs PowerShell modules.
+    Installs or updates a curated set of PowerShell modules with PSResourceGet.
 #>
 
-[CmdletBinding(SupportsShouldProcess = $true)]
+#Requires -Version 7.4
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
 param(
+    [string[]]$Name = @(
+        'ActiveDirectoryDsc',
+        'AWS.Tools.Common',
+        'Az',
+        'CertificateDsc',
+        'ComputerManagementDsc',
+        'ExchangeOnlineManagement',
+        'Microsoft.Graph',
+        'NetworkingDsc',
+        'PnP.PowerShell',
+        'PSScriptAnalyzer',
+        'PSWindowsUpdate',
+        'SqlServer',
+        'SqlServerDsc',
+        'VMware.PowerCLI'
+    ),
+
     [switch]$TrustPSGallery,
-    [switch]$IncludeLegacySharePointModule,
-    [switch]$UpdateExisting
+
+    [switch]$UpdateExisting,
+
+    [ValidateSet('CurrentUser', 'AllUsers')]
+    [string]$Scope = 'CurrentUser'
 )
 
-$modules = @(
-    '7Zip4Powershell',
-    'ActiveDirectoryDsc',
-    'AWSPowerShell',
-    'AWS.Tools.Common',
-    'Az',
-    'CertificateDsc',
-    'ChocolateyGet',
-    'ComputerManagementDsc',
-    'DellBIOSProvider',
-    'ExchangeOnlineManagement',
-    'IISAdministration',
-    'Microsoft.Graph',
-    'NetworkingDsc',
-    'NuGet',
-    'PackageManagement',
-    'PnP.PowerShell',
-    'PowerShellGet',
-    'PSScriptAnalyzer',
-    'PSWindowsUpdate',
-    'SqlServerDsc',
-    'VMware.PowerCLI'
-)
-
-$isWindowsPlatform = ($IsWindows -eq $true) -or ($env:OS -eq 'Windows_NT')
-
-if ($IncludeLegacySharePointModule) {
-    if ($isWindowsPlatform) {
-        $modules += 'Microsoft.Online.SharePoint.PowerShell'
-    }
-    else {
-        Write-Warning 'Skipping Microsoft.Online.SharePoint.PowerShell because it is only supported on Windows.'
-    }
+if (-not (Get-Command Install-PSResource -ErrorAction SilentlyContinue)) {
+    throw 'Microsoft.PowerShell.PSResourceGet is required and is included with supported PowerShell 7 releases.'
 }
 
-$modules = $modules | Sort-Object -Unique
-
-if ($TrustPSGallery -and $PSCmdlet.ShouldProcess('PSGallery', 'Set installation policy to Trusted')) {
-    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+if ($TrustPSGallery -and $PSCmdlet.ShouldProcess('PSGallery', 'Mark repository as trusted')) {
+    Set-PSResourceRepository -Name PSGallery -Trusted
 }
 
-foreach ($moduleName in $modules) {
-    $installedModule = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue
-    if ($installedModule -and -not $UpdateExisting) {
-        Write-Verbose ('Skipping {0}; it is already installed.' -f $moduleName)
+foreach ($moduleName in $Name | Sort-Object -Unique) {
+    $installed = Get-InstalledPSResource -Name $moduleName -ErrorAction SilentlyContinue |
+        Sort-Object Version -Descending |
+        Select-Object -First 1
+    if ($installed -and -not $UpdateExisting) {
+        Write-Verbose "Skipping '$moduleName' because version $($installed.Version) is already installed."
         continue
     }
 
-    if ($PSCmdlet.ShouldProcess($moduleName, 'Install or update module')) {
-        Install-Module -Name $moduleName -Scope CurrentUser -Force -Confirm:$false -AllowClobber
+    $action = if ($installed) { 'Update module' } else { 'Install module' }
+    if ($PSCmdlet.ShouldProcess($moduleName, $action)) {
+        if ($installed) {
+            Update-PSResource -Name $moduleName -Scope $Scope -Repository PSGallery -TrustRepository -ErrorAction Stop
+        }
+        else {
+            Install-PSResource -Name $moduleName -Scope $Scope -Repository PSGallery -TrustRepository -ErrorAction Stop
+        }
     }
 }
 
-Get-InstalledModule | Where-Object Name -in $modules | Sort-Object Name, Version
+Get-InstalledPSResource -Name $Name -ErrorAction SilentlyContinue |
+    Sort-Object Name, Version

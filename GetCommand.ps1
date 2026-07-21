@@ -1,11 +1,22 @@
 <#
 .SYNOPSIS
-    Retrieves command.
+    Exports command metadata for one or more installed modules.
 #>
 
-# Get commands for AWS PowerShell
-Get-Command -Module AWSPowerShell | Select-Object Name, Module, Version, Visibility, Definition | Export-CSV 'C:\Temp\AWSPowerShell.csv' -NoTypeInformation -Force
-# Get commands for Azure
-Get-Command -Module Azure | Select-Object Name, Module, Version, Visibility, Definition | Export-CSV 'C:\Temp\Azure.csv' -NoTypeInformation -Force
-# Get commands for Azure Storage
-Get-Command -Module Azure.Storage | Select-Object Name, Module, Version, Visibility, Definition | Export-CSV 'C:\Temp\AzureStorage.csv' -NoTypeInformation -Force
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string[]]$Module,
+
+    [string]$OutputDirectory = $PWD
+)
+
+$null = New-Item -ItemType Directory -Path $OutputDirectory -Force
+foreach ($moduleName in $Module) {
+    $safeName = $moduleName -replace '[^A-Za-z0-9_.-]', '_'
+    $outputPath = Join-Path $OutputDirectory "$safeName.csv"
+    Get-Command -Module $moduleName -ErrorAction Stop |
+        Select-Object Name, ModuleName, Version, Visibility, CommandType, Definition |
+        Export-Csv -LiteralPath $outputPath -NoTypeInformation -Encoding utf8
+    Get-Item -LiteralPath $outputPath
+}

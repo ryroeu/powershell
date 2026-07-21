@@ -5,7 +5,7 @@
     Deletes user profile.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [string]$ComputersPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Computers.txt'),
     [string]$LogPath = (Join-Path -Path $PSScriptRoot -ChildPath 'UserProfileDelete.log')
@@ -78,6 +78,8 @@ function Get-ProfileName {
 }
 
 function Remove-SelectedProfile {
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+    param()
     $selectedUsers = @($script:ListBox.SelectedItems | ForEach-Object { $_.ToString() })
 
     if (-not $selectedUsers) {
@@ -99,6 +101,9 @@ function Remove-SelectedProfile {
                     continue
                 }
 
+                if (-not $PSCmdlet.ShouldProcess("$computer :: $profilePath", 'Delete user profile')) {
+                    continue
+                }
                 $userProfile | Remove-CimInstance -ErrorAction Stop
                 $message = '{0} has been deleted from {1}' -f $profilePath, $computer
                 Write-Output $message
@@ -117,7 +122,7 @@ function Remove-SelectedProfile {
 }
 
 function Show-ProfileDeletionForm {
-    $profileNames = @(Get-ProfileNames)
+    $profileNames = @(Get-ProfileName)
 
     $script:Form = New-Object System.Windows.Forms.Form
     $script:Form.Text = 'Delete Remote User Profiles'
@@ -144,7 +149,7 @@ function Show-ProfileDeletionForm {
     $deleteButton.Location = New-Object System.Drawing.Point(100, 295)
     $deleteButton.Size = New-Object System.Drawing.Size(95, 28)
     $deleteButton.Text = 'Delete Profile'
-    $deleteButton.Add_Click({ Remove-SelectedProfiles })
+    $deleteButton.Add_Click({ Remove-SelectedProfile -WhatIf:$WhatIfPreference -Confirm:$false })
     $script:Form.Controls.Add($deleteButton)
 
     $logButton = New-Object System.Windows.Forms.Button

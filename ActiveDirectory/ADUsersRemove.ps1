@@ -1,51 +1,64 @@
 <#
 .SYNOPSIS
-    Removes Active Directory users.
+    Reports and optionally removes inactive, expired, or disabled Active Directory users.
 #>
 
-$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
+#Requires -Modules ActiveDirectory
 
-##########################################################################
-### Export Inactive Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountInactive `
-                 -UsersOnly `
-                 -TimeSpan 90.00:00:00 | Select-Object -Property SAMaccountname, `
-                                                                 Enabled, `
-                                                                 PasswordExpired, `
-                                                                 PasswordNeverExpires, `
-                                                                 LastLogonDate `
-                                       | Export-Csv C:\ExportDir\InactiveUsers.csv -NoTypeInformation
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$SearchBase,
 
-### Remove Inactive Users ###
-Search-ADAccount -SearchBase $TargetOU -AccountInactive -UsersOnly -TimeSpan 90.00:00:00 | Remove-ADUser
+    [switch]$Inactive,
 
-##########################################################################
-### Export Expired Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountExpired `
-                 -UsersOnly | Select-Object -Property SAMaccountname, `
-                                                      Enabled, `
-                                                      PasswordExpired, `
-                                                      PasswordNeverExpires, `
-                                                      LastLogonDate `
-                            | Export-Csv C:\ExportDir\ExpiredUsers.csv -NoTypeInformation
+    [switch]$Expired,
 
-### Remove Expired Users ###
-Search-ADAccount -SearchBase $TargetOU -AccountExpired -UsersOnly | Remove-ADUser
+    [switch]$Disabled,
 
-##########################################################################
-### Export Disabled Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountDisabled `
-                 -UsersOnly | Select-Object -Property SAMaccountname, `
-                                                      Enabled, `
-                                                      PasswordExpired, `
-                                                      PasswordNeverExpires, `
-                                                      LastLogonDate `
-                            | Export-Csv C:\ExportDir\DisabledUsers.csv -NoTypeInformation
+    [ValidateRange(1, 3650)]
+    [int]$InactiveDays = 90,
 
-### Remove Disabled Users ###
-Search-ADAccount -SearchBase $TargetOU -AccountDisabled -UsersOnly | Remove-ADUser
+    [string]$ExportPath,
 
-##########################################################################
+    [switch]$Remove
+)
+
+if (-not ($Inactive -or $Expired -or $Disabled)) {
+    throw 'Specify at least one of -Inactive, -Expired, or -Disabled.'
+}
+
+$userMap = @{}
+if ($Inactive) {
+    foreach ($user in Search-ADAccount -SearchBase $SearchBase -AccountInactive -UsersOnly -TimeSpan ([timespan]::FromDays($InactiveDays))) {
+        $userMap[$user.DistinguishedName] = $user
+    }
+}
+if ($Expired) {
+    foreach ($user in Search-ADAccount -SearchBase $SearchBase -AccountExpired -UsersOnly) {
+        $userMap[$user.DistinguishedName] = $user
+    }
+}
+if ($Disabled) {
+    foreach ($user in Search-ADAccount -SearchBase $SearchBase -AccountDisabled -UsersOnly) {
+        $userMap[$user.DistinguishedName] = $user
+    }
+}
+
+$users = @($userMap.Values | ForEach-Object {
+        Get-ADUser -Identity $_ -Properties PasswordExpired, PasswordNeverExpires, LastLogonDate
+    })
+$report = $users | Select-Object SamAccountName, Enabled, PasswordExpired, PasswordNeverExpires, LastLogonDate, DistinguishedName
+
+if ($ExportPath) {
+    $report | Export-Csv -LiteralPath $ExportPath -NoTypeInformation -Encoding utf8NoBOM
+}
+if ($Remove) {
+    foreach ($user in $users) {
+        if ($PSCmdlet.ShouldProcess($user.DistinguishedName, 'Remove Active Directory user')) {
+            Remove-ADUser -Identity $user -Confirm:$false -ErrorAction Stop
+        }
+    }
+}
+
+$report

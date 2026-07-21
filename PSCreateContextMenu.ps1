@@ -1,9 +1,26 @@
 <#
 .SYNOPSIS
-    Creates PowerShell context menu.
+    Adds a Run with PowerShell 7 (Administrator) context-menu command for .ps1 files.
 #>
 
-New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
-New-ItemProperty 'HKCR:\Microsoft.PowerShellScript.1\Shell\Run with PowerShell (Admin)' -Name 'Run with PowerShell'
-New-ItemProperty 'HKCR:\Microsoft.PowerShellScript.1\Shell\Run with PowerShell (Admin)\Command' -Name 'Run with PowerShell'
-Set-ItemProperty 'HKCR:\Microsoft.PowerShellScript.1\Shell\Run with PowerShell (Admin)\Command' '(Default)' '"C:\Program Files\PowerShell\7\pwsh.exe" "-Command" ""& {Start-Process PowerShell.exe -ArgumentList ''-ExecutionPolicy Unrestricted -File \"%1\"'' -Verb RunAs}"'
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$PowerShellPath = (Join-Path $PSHOME 'pwsh.exe')
+)
+
+if (-not (Test-Path -LiteralPath $PowerShellPath -PathType Leaf)) {
+    throw "PowerShell executable not found at '$PowerShellPath'."
+}
+
+$verbPath = 'Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1\Shell\RunWithPowerShell7Admin'
+$commandPath = Join-Path $verbPath 'Command'
+$escapedPowerShellPath = $PowerShellPath.Replace("'", "''")
+$command = '"{0}" -NoProfile -Command "Start-Process -FilePath ''{0}'' -ArgumentList ''-NoProfile -File \"%1\"'' -Verb RunAs"' -f $escapedPowerShellPath
+
+if ($PSCmdlet.ShouldProcess($verbPath, 'Create elevated PowerShell 7 context-menu command')) {
+    $null = New-Item -Path $commandPath -Force
+    Set-Item -LiteralPath $verbPath -Value 'Run with PowerShell 7 (Administrator)'
+    Set-Item -LiteralPath $commandPath -Value $command
+}

@@ -56,9 +56,7 @@ foreach ($pemBlock in $pemBlocks) {
             )
         }
     } catch {
-        # Might fail if a block isn't a valid cert, etc.
-        # Write-Warning "Could not process certificate block $count. Error: $($_.Exception.Message)"
-        # Silently ignore malformed blocks for cleaner output
+        Write-Verbose "Could not process certificate block ${count}: $($_.Exception.Message)"
     } finally {
          # Clean up the cert object if created
         if ($null -ne $cert) {

@@ -1,45 +1,51 @@
-﻿<#
+<#
 .SYNOPSIS
-  Uninstall Microsoft 365 Apps (Click-to-Run) using ODT.
-
-.EXAMPLE
-  .\O365Uninstall.ps1 -Silent
+    Removes Microsoft 365 Apps Click-to-Run products with the Office Deployment Tool.
+.DESCRIPTION
+    Supply setup.exe from a current Office Deployment Tool package. The script intentionally does
+    not pin a version-specific download URL.
 #>
-[CmdletBinding()]
+
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-  [switch] $Silent,
-  [string] $WorkDir = "$env:TEMP\ODT_Uninstall"
+    [Parameter(Mandatory)]
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })]
+    [string]$SetupPath,
+
+    [string]$WorkDirectory = (Join-Path $env:TEMP 'ODT_Uninstall'),
+
+    [switch]$Silent,
+
+    [switch]$ForceAppShutdown
 )
-$ErrorActionPreference = 'Stop'
-$newline = [Environment]::NewLine
 
-# 1) Ensure ODT present (download if needed)
-$odtZipUrl = "https://download.microsoft.com/download/2/6/5/26599e96-6b84-4def-96d7-79fb1a050a1d/officedeploymenttool_16130-20306.exe"
-New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
-$setupExe = Join-Path $WorkDir "setup.exe"
-
-if (-not (Test-Path $setupExe)) {
-  Write-Host "Downloading Office Deployment Tool..." -ForegroundColor Yellow
-  $exe = Join-Path $WorkDir "odt.exe"
-  Invoke-WebRequest -Uri $odtZipUrl -OutFile $exe
-  Start-Process -FilePath $exe -ArgumentList "/quiet /extract:$WorkDir" -Wait
-}
-
-# 2) Create minimal Remove-all config
-$config = @"
+$displayLevel = if ($Silent) { 'None' } else { 'Full' }
+$forceShutdown = if ($ForceAppShutdown) { 'TRUE' } else { 'FALSE' }
+$configuration = @"
 <Configuration>
   <Remove All="TRUE" />
-  <Display Level="$(if($Silent){'None'}else{'Full'})" AcceptEULA="TRUE" />
-  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />
-  <Property Name="SharedComputerLicensing" Value="0" />
+  <Display Level="$displayLevel" AcceptEULA="TRUE" />
+  <Property Name="FORCEAPPSHUTDOWN" Value="$forceShutdown" />
 </Configuration>
 "@
-$configPath = Join-Path $WorkDir "RemoveO365.xml"
-$config | Set-Content -Path $configPath -Encoding UTF8
 
-# 3) Uninstall
-Write-Host "Running ODT uninstall..." -ForegroundColor Cyan
-$psi = Start-Process -FilePath $setupExe -ArgumentList "/configure `"$configPath`"" -Wait -PassThru
-Write-Host "ODT exit code: $($psi.ExitCode)"
-if ($psi.ExitCode -eq 0) { Write-Host "Uninstall complete." -ForegroundColor Green } else { Write-Warning "Uninstall finished with exit code $($psi.ExitCode)." }
-Write-Host "Done." -ForegroundColor Green
+if (-not $PSCmdlet.ShouldProcess($env:COMPUTERNAME, 'Remove all Microsoft 365 Apps Click-to-Run products')) {
+    return
+}
+
+New-Item -ItemType Directory -Path $WorkDirectory -Force | Out-Null
+$configurationPath = Join-Path $WorkDirectory 'RemoveMicrosoft365.xml'
+$configuration | Set-Content -LiteralPath $configurationPath -Encoding utf8NoBOM
+
+$process = Start-Process -FilePath (Resolve-Path -LiteralPath $SetupPath).Path -ArgumentList '/configure', "`"$configurationPath`"" -Wait -PassThru
+if ($process.ExitCode -notin 0, 3010) {
+    throw "Office Deployment Tool failed with exit code $($process.ExitCode)."
+}
+
+[pscustomobject]@{
+    ExitCode      = $process.ExitCode
+    RestartNeeded = $process.ExitCode -eq 3010
+    Configuration = $configurationPath
+}

@@ -1,14 +1,33 @@
 <#
 .SYNOPSIS
-    Adds caar ecord 2 azure DNS.
+    Creates or replaces a CAA record set in Azure DNS.
 #>
 
-$zonename = "example1.com"
-$resourcegroup = "resourcegroup"
-$certificateauthority = "digicert.com" # Possible values are: `letsencrypt.org`, `digicert.com`
-$incidentreport = "you@example1.com" # This will be your personal email id where you want to receive alerts about the Cert incident reports.
+#Requires -Modules Az.Dns
 
-$addcaarecord = @()
-$addcaarecord += New-AzDnsRecordConfig -Caaflags 0 -CaaTag "issue" -CaaValue $certificateauthority
-$addcaarecord += New-AzDnsRecordConfig -Caaflags 0 -CaaTag "iodef" -CaaValue "mailto:$incidentreport"
-New-AzDnsRecordSet -Name "@" -RecordType CAA -ZoneName $zoneName -ResourceGroupName $resourcegroup -Ttl 3600 -DnsRecords ($addcaarecord)
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$ZoneName,
+
+    [Parameter(Mandatory)]
+    [string]$ResourceGroupName,
+
+    [string]$Name = '@',
+
+    [Parameter(Mandatory)]
+    [string[]]$CertificateAuthority,
+
+    [mailaddress]$IncidentReportAddress,
+
+    [ValidateRange(1, [int]::MaxValue)]
+    [int]$Ttl = 3600
+)
+
+$records = @($CertificateAuthority | ForEach-Object { New-AzDnsRecordConfig -CaaFlags 0 -CaaTag issue -CaaValue $_ })
+if ($IncidentReportAddress) {
+    $records += New-AzDnsRecordConfig -CaaFlags 0 -CaaTag iodef -CaaValue "mailto:$($IncidentReportAddress.Address)"
+}
+if ($PSCmdlet.ShouldProcess("$Name.$ZoneName", 'Create or replace Azure DNS CAA record set')) {
+    New-AzDnsRecordSet -Name $Name -RecordType CAA -ZoneName $ZoneName -ResourceGroupName $ResourceGroupName -Ttl $Ttl -DnsRecords $records -Overwrite
+}

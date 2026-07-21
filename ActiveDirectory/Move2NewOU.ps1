@@ -1,6 +1,26 @@
 <#
 .SYNOPSIS
-    Moves 2 new ou.
+    Moves an Active Directory object to another organizational unit.
 #>
 
-Move-ADObject –Identity “CN=ny-pc-b32-23,OU=Computers,OU=Florida,OU=USA,DC=theitbros,DC=com” -TargetPath "OU=Computers,OU=California,OU=USA,DC=theitbros,DC=com"
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [Parameter(Mandatory)]
+    [string]$TargetPath,
+
+    [string]$Server,
+
+    [pscredential]$Credential
+)
+
+$parameters = @{ Identity = $Identity; TargetPath = $TargetPath }
+if ($Server) { $parameters.Server = $Server }
+if ($Credential) { $parameters.Credential = $Credential }
+if ($PSCmdlet.ShouldProcess($Identity, "Move Active Directory object to '$TargetPath'")) {
+    Move-ADObject @parameters -PassThru
+}

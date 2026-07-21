@@ -77,7 +77,7 @@ function Connect-PnPSite {
     Connect-PnPOnline @connectParams
 }
 
-function Select-RecycleBinItems {
+function Select-RecycleBinItem {
     param(
         [Parameter(Mandatory)]
         [object[]]$Items
@@ -228,7 +228,7 @@ if (-not $recycleBinItems) {
     return
 }
 
-$selectedItems = @(Select-RecycleBinItems -Items $recycleBinItems)
+$selectedItems = @(Select-RecycleBinItem -Items $recycleBinItems)
 if (-not $selectedItems) {
     Write-Output 'No recycle bin items were selected.'
     return

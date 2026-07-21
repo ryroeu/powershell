@@ -1,33 +1,25 @@
 <#
 .SYNOPSIS
-    Manages geolocation.
+    Calls the Google Geolocation API and returns the estimated coordinates and accuracy.
 #>
 
-# Enter your Google GeoLocation API Key
-$apikey = "YOUR-API-KEY-HERE"
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ApiKey,
 
-# Define the REST API URL and the body of the request
-$Url = "https://www.googleapis.com/geolocation/v1/geolocate?key=$apikey"
-$Body = Get-Content -Path .\GeoLocate.json
+    [string]$RequestBodyPath = (Join-Path $PSScriptRoot 'GeoLocate.json')
+)
 
-# Invoke the REST API and split the coords into latitude and longitude then round to 4 decimal places
-$location = Invoke-RestMethod -Method 'Post' -Uri $url -Body $body 
-$locationLatRaw = ($location).location.lat
-$locationLngRaw = ($location).location.lng
-$locationLat = [math]::Round($locationLatRaw, 4)
-$locationLng = [math]::Round($locationLngRaw, 4)
+$uri = 'https://www.googleapis.com/geolocation/v1/geolocate?key={0}' -f [uri]::EscapeDataString($ApiKey)
+$body = Get-Content -LiteralPath $RequestBodyPath -Raw -ErrorAction Stop
+$location = Invoke-RestMethod -Method Post -Uri $uri -Body $body -ContentType 'application/json'
 
-# Convert the accuracy from meters to miles
-# Define the conversion rate (meters per mile)
-$metersPerMile = 1609.34
-# Convert meters to miles and round to 2 decimal places
-$metersRaw = $location.accuracy
-$milesRaw = $meters / $metersPerMile
-$meters = [math]::Round($metersRaw, 2)
-$miles = [math]::Round($milesRaw, 2)
-
-# Display the results
-Write-Host "Latitude: $locationLat"
-Write-Host "Longitude: $locationLng"
-Write-Host "Accuracy in meters: $meters"
-Write-Host "Accuracy in miles: $miles"
+$meters = [math]::Round([double]$location.accuracy, 2)
+[pscustomobject]@{
+    Latitude       = [math]::Round([double]$location.location.lat, 4)
+    Longitude      = [math]::Round([double]$location.location.lng, 4)
+    AccuracyMeters = $meters
+    AccuracyMiles  = [math]::Round($meters / 1609.344, 2)
+}

@@ -1,11 +1,19 @@
 <#
 .SYNOPSIS
-    Manages active directory expired passwords.
+    Retrieves Active Directory users whose passwords are expired.
 #>
 
-### Display Users who have been inactive 90 Days ###
-$InactiveDays = 90
-$MaxPasswordAge = (Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.Days
-Search-AdAccount -PasswordExpired `
-                 -UsersOnly | Where-Object {((Get-Date) - (Get-AdUser -Filter "samAccountName -eq $_.SamAccountName").PasswordLastSet) -lt ($MaxPasswordAge + $InactiveDays)}
-Read-Host -Prompt "Press Enter to exit"
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$SearchBase,
+
+    [string]$OutputPath
+)
+
+$parameters = @{ UsersOnly = $true; PasswordExpired = $true }
+if ($SearchBase) { $parameters.SearchBase = $SearchBase }
+$accounts = Search-ADAccount @parameters | Select-Object Name, SamAccountName, Enabled, PasswordExpired, PasswordNeverExpires, LastLogonDate
+if ($OutputPath) { $accounts | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
+$accounts

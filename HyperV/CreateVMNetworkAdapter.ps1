@@ -1,11 +1,32 @@
 <#
 .SYNOPSIS
-    Creates virtual machine network adapter.
+    Adds a network adapter to a Hyper-V virtual machine.
 #>
 
-### Create New Network Adapter on VM ###
-Add-VMNetworkAdapter -VM "NameOfVM" `
-                     -SwitchName "NameOfVswitch" `
-                     -ComputerName "HyperVhostName" `
-                     -Name "NameOfNewAdapter" `
-                     -IsLegacy $false
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$VMName,
+
+    [Parameter(Mandatory)]
+    [string]$SwitchName,
+
+    [Parameter(Mandatory)]
+    [string]$Name,
+
+    [string]$ComputerName,
+
+    [switch]$Legacy
+)
+
+$parameters = @{
+    VMName     = $VMName
+    SwitchName = $SwitchName
+    Name       = $Name
+    IsLegacy   = $Legacy
+}
+if ($ComputerName) { $parameters.ComputerName = $ComputerName }
+
+if ($PSCmdlet.ShouldProcess(($ComputerName ?? $env:COMPUTERNAME), "Add adapter '$Name' to VM '$VMName'")) {
+    Add-VMNetworkAdapter @parameters
+}

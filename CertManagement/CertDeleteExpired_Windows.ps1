@@ -31,7 +31,7 @@ WARNING: Running this script without -WhatIf will permanently delete certificate
 #>
 [CmdletBinding(SupportsShouldProcess = $true)] # Enables -WhatIf, -Confirm
 param(
-    [Parameter(Mandatory = $false, ValueFromPipeline = $false, HelpMessage = "Path(s) to the certificate store(s) to search.")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path(s) to the certificate store(s) to search.")]
     [string[]]$StorePath = @("Cert:\LocalMachine\My") # Default to Local Machine Personal store - SAFER!
 )
 

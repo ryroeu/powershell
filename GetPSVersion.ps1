@@ -1,8 +1,9 @@
 <#
 .SYNOPSIS
-    Retrieves PowerShell version.
+    Retrieves PowerShell runtime and platform version information.
 #>
 
-### Display PowerShell Version ###
-$PSVersionTable.PSVersion
-Read-Host -Prompt "Press Enter to exit"
+[CmdletBinding()]
+param()
+
+$PSVersionTable

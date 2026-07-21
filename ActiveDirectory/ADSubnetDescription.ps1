@@ -1,7 +1,24 @@
 <#
 .SYNOPSIS
-    Manages active directory subnet description.
+    Sets an Active Directory replication subnet description.
 #>
 
-# Change AD Subnet Description
-Set-ADReplicationSubnet -Identity 10.0.0.0/8 -Description "New description here”
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Description,
+
+    [string]$Server
+)
+
+$parameters = @{ Identity = $Identity; Description = $Description }
+if ($Server) { $parameters.Server = $Server }
+if ($PSCmdlet.ShouldProcess($Identity, "Set subnet description to '$Description'")) {
+    Set-ADReplicationSubnet @parameters -PassThru
+}

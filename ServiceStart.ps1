@@ -1,26 +1,22 @@
 <#
 .SYNOPSIS
-    Starts service.
+    Starts a Windows service and waits for it to reach the Running state.
 #>
 
-$ServiceName = 'Name of Service'
-$arrService = Get-Service -Name $ServiceName
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Name,
 
-while ($arrService.Status -ne 'Running')
-{
+    [ValidateRange(1, 3600)]
+    [int]$TimeoutSeconds = 60
+)
 
-    Start-Service $ServiceName
-    write-host $arrService.status
-    write-host 'Service starting'
-    Start-Sleep -seconds 60
-    $arrService.Refresh()
-    if ($arrService.Status -eq 'Running')
-    {
-        Write-Host 'Service is now Running'
-    }
-    else
-    {
-        Write-Host "Service could not be Started"
-    }
-
+$service = Get-Service -Name $Name -ErrorAction Stop
+if ($service.Status -ne 'Running' -and $PSCmdlet.ShouldProcess($service.Name, 'Start service')) {
+    Start-Service -InputObject $service -ErrorAction Stop
+    $service.WaitForStatus('Running', [timespan]::FromSeconds($TimeoutSeconds))
+    $service.Refresh()
 }
+
+$service

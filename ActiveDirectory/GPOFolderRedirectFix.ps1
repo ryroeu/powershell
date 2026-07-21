@@ -1,19 +1,40 @@
 <#
 .SYNOPSIS
-    Manages group policy folder redirect fix.
+    Backs up and optionally clears local Group Policy registry caches before refreshing policy.
+.DESCRIPTION
+    Clearing these policy keys is disruptive. Backups are exported before removal and -ResetPolicyCache
+    must be specified explicitly. The script no longer changes DNS server addresses.
 #>
 
-### FOLDER REDIRECTION GPO FIX ###
-reg export "HKLM:\Software\Policies\Microsoft" C:\HKLM_MicrosoftBkUp.reg
-Remove-Item -Path “HKLM:\Software\Policies\Microsoft” -Recurse -Force
-reg export "HKCU:\Software\Policies\Microsoft" C:\HKCU_MicrosoftBkUp.reg
-Remove-Item -Path “HKCU:\Software\Policies\Microsoft” -Recurse -Force
-reg export "HKCU:\Software\Microsoft\Windows\CurrentVersion\Group Policy Objects" C:\HKCU_GPOBkUp.reg
-Remove-Item -Path “HKCU:\Software\Microsoft\Windows\CurrentVersion\Group Policy Objects” -Recurse -Force
-reg export "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies" C:\HKCU_PoliciesBkUp.reg
-Remove-Item -Path “HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies” -Recurse -Force
-Set-DNSClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses ("172.16.17.10","172.16.17.20")
-ipconfig /flushdns
-gpupdate /force
-Set-DNSClientServerAddress -InterfaceAlias "Ethernet" -ResetServerAddresses
-Read-Host -Prompt "Press Enter to exit"
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$BackupDirectory = (Join-Path $env:SystemDrive 'PolicyRegistryBackup'),
+
+    [switch]$ResetPolicyCache
+)
+
+$entries = @(
+    @{ NativePath = 'HKLM\Software\Policies\Microsoft'; ProviderPath = 'Registry::HKEY_LOCAL_MACHINE\Software\Policies\Microsoft'; FileName = 'HKLM_Policies_Microsoft.reg' },
+    @{ NativePath = 'HKCU\Software\Policies\Microsoft'; ProviderPath = 'Registry::HKEY_CURRENT_USER\Software\Policies\Microsoft'; FileName = 'HKCU_Policies_Microsoft.reg' },
+    @{ NativePath = 'HKCU\Software\Microsoft\Windows\CurrentVersion\Group Policy Objects'; ProviderPath = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Group Policy Objects'; FileName = 'HKCU_GroupPolicyObjects.reg' },
+    @{ NativePath = 'HKCU\Software\Microsoft\Windows\CurrentVersion\Policies'; ProviderPath = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies'; FileName = 'HKCU_CurrentVersion_Policies.reg' }
+)
+
+$null = New-Item -ItemType Directory -Path $BackupDirectory -Force
+foreach ($entry in $entries) {
+    if (-not (Test-Path -LiteralPath $entry.ProviderPath)) { continue }
+    $backupPath = Join-Path $BackupDirectory $entry.FileName
+    & "$env:SystemRoot\System32\reg.exe" export $entry.NativePath $backupPath /y | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Failed to export '$($entry.NativePath)'." }
+
+    if ($ResetPolicyCache -and $PSCmdlet.ShouldProcess($entry.ProviderPath, "Remove policy registry key after backup to '$backupPath'")) {
+        Remove-Item -LiteralPath $entry.ProviderPath -Recurse -Force
+    }
+}
+
+if ($PSCmdlet.ShouldProcess('Local computer', 'Refresh Group Policy')) {
+    & "$env:SystemRoot\System32\gpupdate.exe" /force
+    if ($LASTEXITCODE -ne 0) { throw "gpupdate.exe failed with exit code $LASTEXITCODE." }
+}

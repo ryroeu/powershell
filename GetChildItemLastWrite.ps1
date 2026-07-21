@@ -1,10 +1,17 @@
 <#
 .SYNOPSIS
-    Retrieves child item last write.
+    Returns items modified after a specified date and time.
 #>
 
-Param(
-    [Parameter(Mandatory=$true)]
-    [Datetime]$LastWrite
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [datetime]$LastWrite,
+
+    [string]$Path = $PWD,
+
+    [switch]$Recurse
 )
-Get-ChildItem -Path $path | Where-Object -FilterScript {($_.LastWriteTime -gt $LastWrite)}
+
+Get-ChildItem -LiteralPath $Path -Recurse:$Recurse |
+    Where-Object LastWriteTime -gt $LastWrite

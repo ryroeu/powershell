@@ -1,10 +1,28 @@
 <#
 .SYNOPSIS
-    Manages active directory replication schedule.
+    Configures the daily replication window for an Active Directory site link.
 #>
 
-# Set AD Replication schedule to 8am-5pm / Sunday-Saturday
-$replicationSchedule = New-Object -TypeName System.DirectoryServices.ActiveDirectory.ActiveDirectorySchedule 
-$replicationSchedule.SetDailySchedule("Eight","Zero","Seventeen","Zero")
-Import-Module ActiveDirectory
-Set-ADReplicationSiteLink DEFAULTIPSITELINK -ReplicationSchedule $replicationSchedule
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [string]$Identity = 'DEFAULTIPSITELINK',
+
+    [ValidateRange(0, 23)]
+    [int]$StartHour = 8,
+
+    [ValidateRange(0, 23)]
+    [int]$EndHour = 17
+)
+
+$schedule = [DirectoryServices.ActiveDirectory.ActiveDirectorySchedule]::new()
+$schedule.SetDailySchedule(
+    [DirectoryServices.ActiveDirectory.HourOfDay]$StartHour,
+    [DirectoryServices.ActiveDirectory.MinuteOfHour]::Zero,
+    [DirectoryServices.ActiveDirectory.HourOfDay]$EndHour,
+    [DirectoryServices.ActiveDirectory.MinuteOfHour]::Zero
+)
+if ($PSCmdlet.ShouldProcess($Identity, "Set daily replication window to $StartHour`:00-$EndHour`:00")) {
+    Set-ADReplicationSiteLink -Identity $Identity -ReplicationSchedule $schedule -PassThru
+}

@@ -1,8 +1,19 @@
 <#
 .SYNOPSIS
-    Creates CSV running services.
+    Exports running services to CSV.
 #>
 
-### Export Running Services to CSV ###
-Get-Service | Where-Object {$_.status -eq "running"} `
-            | Export-CSV C:\ExportDir\RunningServices.csv -NoTypeInformation
+[CmdletBinding()]
+param(
+    [string]$OutputPath = (Join-Path $PWD 'RunningServices.csv')
+)
+
+$parent = Split-Path -Parent $OutputPath
+if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+    $null = New-Item -ItemType Directory -Path $parent -Force
+}
+
+Get-Service |
+    Where-Object Status -eq 'Running' |
+    Select-Object Name, DisplayName, Status, StartType |
+    Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8

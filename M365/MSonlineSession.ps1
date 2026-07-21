@@ -1,8 +1,21 @@
 <#
 .SYNOPSIS
-    Manages ms online session.
+    Opens an interactive Microsoft Graph session.
 #>
 
-Import-Module Microsoft.Graph.Authentication
-$TenantID = "YourTenantID"
-Connect-MgGraph -TenantId $TenantID -Scopes "User.ReadWrite.All", "Directory.ReadWrite.All"
+#Requires -Modules Microsoft.Graph.Authentication
+
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$TenantId,
+
+    [string[]]$Scopes = @('User.ReadWrite.All', 'Directory.ReadWrite.All'),
+
+    [switch]$UseDeviceCode
+)
+
+$parameters = @{ TenantId = $TenantId; Scopes = $Scopes; NoWelcome = $true }
+if ($UseDeviceCode) { $parameters.UseDeviceCode = $true }
+Connect-MgGraph @parameters
+Get-MgContext

@@ -1,61 +1,70 @@
 <#
 .SYNOPSIS
-    Sends email non Microsoft 365.
+    Sends an email through an SMTP server using the built-in .NET SMTP client.
+.DESCRIPTION
+    System.Net.Mail.SmtpClient remains available but is not recommended for new applications. Prefer a
+    provider API or MailKit for new automation. This script exists for SMTP servers that still support it.
 #>
 
-# --- Configuration ---
-$From = "user@domain.com"
-$To = "recipient@domain.com"
-$Cc = "cc-user@domain.com"
-$AttachmentPath = "C:\Temp\File.jpg"
-$Subject = "File Request (.NET SmtpClient)"
-$Body = "<h2>Here is the file you requested</h2><br><br>"
-$Body += "Name of file: $(Split-Path -Path $AttachmentPath -Leaf)"
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [mailaddress]$From,
 
-$SMTPServer = "smtp.mailserver.com"
-$SMTPPort = 587
+    [Parameter(Mandatory)]
+    [mailaddress[]]$To,
 
-# --- Credentials (Handle Securely in production!) ---
-Write-Host "Please enter SMTP credentials for $SMTPServer..."
-$Credential = Get-Credential # Use PSCredential object
+    [mailaddress[]]$Cc,
 
-# --- Create Mail Objects ---
-# IMPORTANT: Using a class Microsoft discourages for new development.
-Write-Warning "Using System.Net.Mail.SmtpClient, which is not recommended by Microsoft for new development."
+    [Parameter(Mandatory)]
+    [string]$Subject,
 
-$mailMessage = New-Object System.Net.Mail.MailMessage
-$mailMessage.From = $From
-$mailMessage.To.Add($To)
-if ($Cc) { $mailMessage.CC.Add($Cc) }
-$mailMessage.Subject = $Subject
-$mailMessage.Body = $Body
-$mailMessage.IsBodyHtml = $true
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Body,
 
-# --- Add Attachment ---
-if (Test-Path $AttachmentPath) {
-    $attachment = New-Object System.Net.Mail.Attachment($AttachmentPath)
-    $mailMessage.Attachments.Add($attachment)
-} else {
-    Write-Warning "Attachment not found at $AttachmentPath"
-}
+    [string[]]$AttachmentPath,
 
-# --- Create SMTP Client ---
-$smtpClient = New-Object System.Net.Mail.SmtpClient($SMTPServer, $SMTPPort)
-$smtpClient.EnableSsl = $true # Corresponds to UseSsl/StartTls for port 587 typically
-$smtpClient.Credentials = $Credential # Assign the PSCredential object
+    [Parameter(Mandatory)]
+    [string]$SmtpServer,
 
-# --- Send Email ---
+    [ValidateRange(1, 65535)]
+    [int]$Port = 587,
+
+    [pscredential]$Credential,
+
+    [switch]$UseSsl,
+
+    [switch]$BodyAsHtml
+)
+
+$message = [Net.Mail.MailMessage]::new()
+$client = [Net.Mail.SmtpClient]::new($SmtpServer, $Port)
 try {
-    Write-Host "Attempting to send email via $SMTPServer using .NET SmtpClient..."
-    $smtpClient.Send($mailMessage)
-    Write-Host "Email sent successfully."
-}
-catch {
-    Write-Error "Failed to send email using .NET SmtpClient: $($_.Exception.ToString())"
+    $message.From = $From
+    foreach ($address in $To) { $message.To.Add($address) }
+    foreach ($address in $Cc) { $message.CC.Add($address) }
+    $message.Subject = $Subject
+    $message.Body = $Body
+    $message.IsBodyHtml = $BodyAsHtml
+
+    foreach ($path in $AttachmentPath) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Attachment '$path' was not found."
+        }
+        $message.Attachments.Add([Net.Mail.Attachment]::new((Resolve-Path -LiteralPath $path).Path))
+    }
+
+    $client.EnableSsl = $UseSsl
+    if ($Credential) {
+        $client.Credentials = $Credential.GetNetworkCredential()
+    }
+
+    if ($PSCmdlet.ShouldProcess(($To -join ', '), "Send email '$Subject' through $SmtpServer`:$Port")) {
+        $client.Send($message)
+    }
 }
 finally {
-    # Dispose of objects to release resources
-    if ($attachment) { $attachment.Dispose() }
-    $mailMessage.Dispose()
-    $smtpClient.Dispose()
+    $message.Dispose()
+    $client.Dispose()
 }

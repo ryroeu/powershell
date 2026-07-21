@@ -5,7 +5,7 @@
 .EXAMPLE
   .\O365UninstallCleanUp.ps1
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
   [switch] $Aggressive   # removes extra cached folders if present
 )
@@ -17,8 +17,10 @@ foreach ($svc in $services) {
   $s = Get-Service -Name $svc -ErrorAction SilentlyContinue
   if ($s -and $s.Status -ne 'Stopped') {
     Write-Host "Stopping service $svc..." -ForegroundColor Yellow
-    Stop-Service $svc -Force -ErrorAction SilentlyContinue
-    Set-Service  $svc -StartupType Disabled -ErrorAction SilentlyContinue
+    if ($PSCmdlet.ShouldProcess($svc, 'Stop and disable service')) {
+      Stop-Service $svc -Force -ErrorAction SilentlyContinue
+      Set-Service  $svc -StartupType Disabled -ErrorAction SilentlyContinue
+    }
   }
 }
 
@@ -31,7 +33,9 @@ $tasks = @(
 foreach ($t in $tasks) {
   if (Get-ScheduledTask -TaskPath ($t.Substring(0,$t.LastIndexOf('\')+1)) -TaskName ($t.Split('\')[-1]) -ErrorAction SilentlyContinue) {
     Write-Host "Deleting scheduled task $t" -ForegroundColor Yellow
-    Unregister-ScheduledTask -TaskPath ($t.Substring(0,$t.LastIndexOf('\')+1)) -TaskName ($t.Split('\')[-1]) -Confirm:$false
+    if ($PSCmdlet.ShouldProcess($t, 'Remove scheduled task')) {
+      Unregister-ScheduledTask -TaskPath ($t.Substring(0,$t.LastIndexOf('\')+1)) -TaskName ($t.Split('\')[-1]) -Confirm:$false
+    }
   }
 }
 
@@ -51,7 +55,9 @@ if ($Aggressive) {
 foreach ($p in $paths) {
   if (Test-Path $p) {
     Write-Host "Removing $p" -ForegroundColor Yellow
-    Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+    if ($PSCmdlet.ShouldProcess($p, 'Remove Microsoft 365 leftover directory')) {
+      Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+    }
   }
 }
 
@@ -62,9 +68,11 @@ Get-ChildItem $reg -ErrorAction SilentlyContinue |
   Where-Object { $_.DisplayName -like '*Click-to-Run*' -or $_.DisplayName -like '*Microsoft 365*' } |
   ForEach-Object {
     try {
-      Remove-Item $_.PSPath -Recurse -Force
-      Write-Host "Cleaned uninstall key: $($_.DisplayName)" -ForegroundColor Green
-    } catch { }
+      if ($PSCmdlet.ShouldProcess($_.PSPath, 'Remove stale uninstall registry key')) {
+        Remove-Item $_.PSPath -Recurse -Force
+        Write-Host "Cleaned uninstall key: $($_.DisplayName)" -ForegroundColor Green
+      }
+    } catch { Write-Warning "Failed to clean uninstall key '$($_.PSPath)': $($_.Exception.Message)" }
   }
 
 Write-Host "Cleanup completed." -ForegroundColor Green

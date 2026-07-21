@@ -1,6 +1,24 @@
 <#
 .SYNOPSIS
-    Renames file ext.
+    Changes file extensions without converting file contents.
 #>
 
-Get-ChildItem *.csv | Rename-Item -NewName { [io.path]::ChangeExtension($_.name, "xlsx") }
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [string]$Path = $PWD,
+
+    [Parameter(Mandatory)]
+    [ValidatePattern('^\.?[^.\\/]+$')]
+    [string]$FromExtension,
+
+    [Parameter(Mandatory)]
+    [ValidatePattern('^\.?[^.\\/]+$')]
+    [string]$ToExtension
+)
+
+$from = if ($FromExtension.StartsWith('.')) { $FromExtension } else { ".$FromExtension" }
+$to = if ($ToExtension.StartsWith('.')) { $ToExtension } else { ".$ToExtension" }
+
+Get-ChildItem -LiteralPath $Path -File |
+    Where-Object Extension -eq $from |
+    Rename-Item -NewName { [IO.Path]::ChangeExtension($_.Name, $to) } -WhatIf:$WhatIfPreference

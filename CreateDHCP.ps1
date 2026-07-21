@@ -1,78 +1,82 @@
 <#
 .SYNOPSIS
-    Creates DHCP.
+    Installs, authorizes, and configures a Windows DHCP Server.
+.EXAMPLE
+    $scopes = @(
+        @{ Name='CorpNet'; StartRange='10.0.0.20'; EndRange='10.0.0.254'; SubnetMask='255.255.255.0'; Router='10.0.0.1'; ExclusionStart='10.0.0.20'; ExclusionEnd='10.0.0.30' }
+    )
+    ./CreateDHCP.ps1 -ComputerName DHCP1 -DnsName DHCP1.contoso.com -IPAddress 10.0.0.3 -DnsDomain contoso.com -DnsServer 10.0.0.2 -Scope $scopes
 #>
 
-### Set IP / DNS on Server ###
-New-NetIPAddress -IPAddress 10.0.0.3 `
-                 -InterfaceAlias "Ethernet" `
-                 -DefaultGateway 10.0.0.1 `
-                 -AddressFamily IPv4 `
-                 -PrefixLength 24
-Set-DnsClientServerAddress -InterfaceAlias "Ethernet" `
-                           -ServerAddresses 10.0.0.2
+#Requires -RunAsAdministrator
+#Requires -Modules DhcpServer, ServerManager
 
-### Rename Server ###
-Rename-Computer -Name DHCP1
-Restart-Computer
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [string]$ComputerName = $env:COMPUTERNAME,
 
-### Add Server to Domain ###
-Add-Computer DOMAIN
-Restart-Computer
+    [Parameter(Mandatory)]
+    [string]$DnsName,
 
-### Install DHCP Role ###
-Install-WindowsFeature DHCP -IncludeManagementTools
+    [Parameter(Mandatory)]
+    [ipaddress]$IPAddress,
 
-### Security Groups ###
-netsh dhcp add securitygroups
-Restart-service dhcpserver
+    [Parameter(Mandatory)]
+    [string]$DnsDomain,
 
-### Authorize Server on Domain ###
-Add-DhcpServerInDC -DnsName DHCP1.corp.contoso.com `
-                   -IPAddress 10.0.0.3
-Get-DhcpServerInDC
+    [Parameter(Mandatory)]
+    [ipaddress[]]$DnsServer,
 
-### Appeal ServMan Message ###
-Set-ItemProperty –Path registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\ServerManager\Roles\12 `
-                 –Name ConfigurationState `
-                 –Value 2
+    [Parameter(Mandatory)]
+    [hashtable[]]$Scope,
 
-### Config Dynamic DNS Updates ###
-Set-DhcpServerv4DnsSetting -ComputerName "DHCP1.corp.contoso.com" `
-                           -DynamicUpdates "Always" `
-                           -DeleteDnsRRonLeaseExpiry $True
+    [pscredential]$DnsUpdateCredential
+)
 
-### Config Dynamic DNS Update Creds ###
-$Credential = Get-Credential
-Set-DhcpServerDnsCredential -Credential $Credential `
-                            -ComputerName "DHCP1.corp.contoso.com"
+if ($PSCmdlet.ShouldProcess($ComputerName, 'Install DHCP Server role')) {
+    Install-WindowsFeature -Name DHCP -ComputerName $ComputerName -IncludeManagementTools -ErrorAction Stop
+}
 
-### Config CorpNet Scope ###
-Add-DhcpServerv4Scope -Name "Corpnet" `
-                      -StartRange 10.0.0.1 `
-                      -EndRange 10.0.0.254 `
-                      -SubnetMask 255.255.255.0 `
-                      -State Active`
-Add-DhcpServerv4ExclusionRange -ScopeID 10.0.0.0 `
-                               -StartRange 10.0.0.1 `
-                               -EndRange 10.0.0.15`
-Set-DhcpServerv4OptionValue -OptionID 3 `
-                            -Value 10.0.0.1 `
-                            -ScopeID 10.0.0.0 `
-                            -ComputerName DHCP1.corp.contoso.com`
-Set-DhcpServerv4OptionValue -DnsDomain corp.contoso.com `
-                            -DnsServer 10.0.0.2
+if ($PSCmdlet.ShouldProcess($DnsName, 'Authorize DHCP server in Active Directory')) {
+    $authorized = Get-DhcpServerInDC | Where-Object { $_.DnsName -eq $DnsName -or $_.IPAddress -eq $IPAddress.IPAddressToString }
+    if (-not $authorized) {
+        Add-DhcpServerInDC -DnsName $DnsName -IPAddress $IPAddress -ErrorAction Stop
+    }
+}
 
-### Config CorpNet Scopes for additional Subnets ###
-Add-DhcpServerv4Scope -Name "Corpnet2" `
-                      -StartRange 10.0.1.1 `
-                      -EndRange 10.0.1.254 `
-                      -SubnetMask 255.255.255.0 `
-                      -State Active
-Add-DhcpServerv4ExclusionRange -ScopeID 10.0.1.0 `
-                               -StartRange 10.0.1.1 `
-                               -EndRange 10.0.1.15
-Set-DhcpServerv4OptionValue -OptionID 3 `
-                            -Value 10.0.1.1 `
-                            -ScopeID 10.0.1.0 `
-                            -ComputerName DHCP1.corp.contoso.com
+if ($PSCmdlet.ShouldProcess($DnsName, 'Configure DHCP dynamic DNS updates')) {
+    Set-DhcpServerv4DnsSetting -ComputerName $ComputerName -DynamicUpdates Always -DeleteDnsRRonLeaseExpiry $true
+    if ($DnsUpdateCredential) {
+        Set-DhcpServerDnsCredential -ComputerName $ComputerName -Credential $DnsUpdateCredential
+    }
+}
+
+foreach ($definition in $Scope) {
+    foreach ($requiredKey in 'Name', 'StartRange', 'EndRange', 'SubnetMask', 'Router') {
+        if (-not $definition.ContainsKey($requiredKey)) {
+            throw "Scope definition is missing required key '$requiredKey'."
+        }
+    }
+
+    $scopeId = ([ipaddress]$definition.StartRange).IPAddressToString
+    $existing = Get-DhcpServerv4Scope -ComputerName $ComputerName -ErrorAction SilentlyContinue |
+        Where-Object Name -eq $definition.Name
+    if (-not $existing -and $PSCmdlet.ShouldProcess("$ComputerName :: $($definition.Name)", 'Create DHCP scope')) {
+        Add-DhcpServerv4Scope -ComputerName $ComputerName -Name $definition.Name -StartRange $definition.StartRange -EndRange $definition.EndRange -SubnetMask $definition.SubnetMask -State Active
+        $existing = Get-DhcpServerv4Scope -ComputerName $ComputerName -ErrorAction Stop |
+            Where-Object Name -eq $definition.Name
+    }
+    if ($existing) {
+        $scopeId = $existing.ScopeId
+    }
+
+    if ($definition.ExclusionStart -and $definition.ExclusionEnd -and $PSCmdlet.ShouldProcess("$ComputerName :: $scopeId", 'Create DHCP exclusion range')) {
+        Add-DhcpServerv4ExclusionRange -ComputerName $ComputerName -ScopeId $scopeId -StartRange $definition.ExclusionStart -EndRange $definition.ExclusionEnd
+    }
+
+    if ($PSCmdlet.ShouldProcess("$ComputerName :: $scopeId", 'Configure DHCP router and DNS options')) {
+        Set-DhcpServerv4OptionValue -ComputerName $ComputerName -ScopeId $scopeId -Router $definition.Router -DnsDomain $DnsDomain -DnsServer $DnsServer
+    }
+}
+
+Get-DhcpServerv4Scope -ComputerName $ComputerName

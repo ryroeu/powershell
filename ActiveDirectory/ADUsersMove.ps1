@@ -1,54 +1,78 @@
 <#
 .SYNOPSIS
-    Moves Active Directory users.
+    Reports and optionally moves inactive, expired, and disabled Active Directory users.
 #>
 
-$TargetOU = "OU=NameOfOU,DC=domain,DC=com"
-$InactiveOU = "OU=Inactive Users,OU=NameOfOU,DC=domain,DC=com"
-$ExpiredOU = "OU=Expired Users,OU=NameOfOU,DC=domain,DC=com"
-$DisabledOU = "OU=Disabled Users,OU=NameOfOU,DC=domain,DC=com"
+#Requires -Modules ActiveDirectory
 
-##########################################################################
-### Export Inactive Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountInactive `
-                 -UsersOnly `
-                 -TimeSpan 90.00:00:00 | Select-Object -Property SAMaccountname, `
-                                                                 Enabled, `
-                                                                 PasswordExpired, `
-                                                                 PasswordNeverExpires, `
-                                                                 LastLogonDate `
-                                       | Export-Csv C:\ExportDir\InactiveUsers.csv -NoTypeInformation
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$SearchBase,
 
-### Move Inactive Users to new OU ###
-Search-ADAccount -SearchBase $TargetOU -AccountInactive -UsersOnly -TimeSpan 90.00:00:00 | Move-ADObject -TargetPath $InactiveOU
+    [Parameter(Mandatory)]
+    [string]$InactiveTargetPath,
 
-##########################################################################
-### Export Expired Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountExpired `
-                 -UsersOnly | Select-Object -Property SAMaccountname, `
-                                                      Enabled, `
-                                                      PasswordExpired, `
-                                                      PasswordNeverExpires, `
-                                                      LastLogonDate `
-                            | Export-Csv C:\ExportDir\ExpiredUsers.csv -NoTypeInformation
+    [Parameter(Mandatory)]
+    [string]$ExpiredTargetPath,
 
-### Move Expired Users to new OU ###
-Search-ADAccount -SearchBase $TargetOU -AccountExpired -UsersOnly | Move-ADObject -TargetPath $ExpiredOU
+    [Parameter(Mandatory)]
+    [string]$DisabledTargetPath,
 
-##########################################################################
-### Export Disabled Users to CSV for Reference ###
-Search-ADAccount -SearchBase $TargetOU `
-                 -AccountDisabled `
-                 -UsersOnly | Select-Object -Property SAMaccountname, `
-                                                      Enabled, `
-                                                      PasswordExpired, `
-                                                      PasswordNeverExpires, `
-                                                      LastLogonDate `
-                            | Export-Csv C:\ExportDir\DisabledUsers.csv -NoTypeInformation
+    [ValidateRange(1, 3650)]
+    [int]$InactiveDays = 90,
 
-### Move Disabled Users to new OU ###
-Search-ADAccount -SearchBase $TargetOU -AccountDisabled -UsersOnly | Move-ADObject -TargetPath $DisabledOU
+    [string]$ExportDirectory,
 
-##########################################################################
+    [switch]$Move
+)
+
+$categories = @(
+    @{ Name = 'Inactive'; TargetPath = $InactiveTargetPath; Users = @(Search-ADAccount -SearchBase $SearchBase -AccountInactive -UsersOnly -TimeSpan ([timespan]::FromDays($InactiveDays))) },
+    @{ Name = 'Expired'; TargetPath = $ExpiredTargetPath; Users = @(Search-ADAccount -SearchBase $SearchBase -AccountExpired -UsersOnly) },
+    @{ Name = 'Disabled'; TargetPath = $DisabledTargetPath; Users = @(Search-ADAccount -SearchBase $SearchBase -AccountDisabled -UsersOnly) }
+)
+
+# The later category wins when an account meets more than one condition: Disabled, then Expired, then Inactive.
+$assignments = @{}
+foreach ($category in $categories) {
+    foreach ($user in $category.Users) {
+        $assignments[$user.DistinguishedName] = [pscustomobject]@{
+            Category   = $category.Name
+            TargetPath = $category.TargetPath
+            User       = $user
+        }
+    }
+}
+
+$report = foreach ($assignment in $assignments.Values) {
+    $user = Get-ADUser -Identity $assignment.User -Properties PasswordExpired, PasswordNeverExpires, LastLogonDate
+    [pscustomobject]@{
+        Category            = $assignment.Category
+        SamAccountName      = $user.SamAccountName
+        Enabled             = $user.Enabled
+        PasswordExpired     = $user.PasswordExpired
+        PasswordNeverExpires = $user.PasswordNeverExpires
+        LastLogonDate       = $user.LastLogonDate
+        DistinguishedName   = $user.DistinguishedName
+        TargetPath          = $assignment.TargetPath
+    }
+}
+
+if ($ExportDirectory) {
+    New-Item -ItemType Directory -Path $ExportDirectory -Force | Out-Null
+    foreach ($categoryName in 'Inactive', 'Expired', 'Disabled') {
+        $report | Where-Object Category -eq $categoryName |
+            Export-Csv -LiteralPath (Join-Path $ExportDirectory "$categoryName`Users.csv") -NoTypeInformation -Encoding utf8NoBOM
+    }
+}
+
+if ($Move) {
+    foreach ($assignment in $assignments.Values) {
+        if ($PSCmdlet.ShouldProcess($assignment.User.DistinguishedName, "Move to '$($assignment.TargetPath)'")) {
+            Move-ADObject -Identity $assignment.User -TargetPath $assignment.TargetPath -ErrorAction Stop
+        }
+    }
+}
+
+$report | Sort-Object Category, SamAccountName

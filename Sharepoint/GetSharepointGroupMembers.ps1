@@ -1,26 +1,49 @@
 <#
 .SYNOPSIS
-    Retrieves SharePoint group members.
+    Lists members of SharePoint Online site groups with PnP.PowerShell.
 #>
 
-Add-PSSnapin Microsoft.SharePoint.PowerShell -EA SilentlyContinue
+#Requires -Version 7.4
+#Requires -Modules PnP.PowerShell
 
-$URL="https://sharepoint.company.com/sites/helpdesk/us"
-$Site = Get-SPSite $URL
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [uri]$SiteUrl,
 
-If(Get-SPWeb($url).HasUniqueRoleAssignments -eq $true) {
-    $Web=Get-SPWeb($url)
-}
-else {
-    $web= $site.RootWeb
-}
+    [Parameter(Mandatory)]
+    [string]$ClientId,
 
-#Get all Groups and Iterate through
-ForEach ($Group in $Web.SiteGroups) {
-    Write-Host " Group Name: "$Group.Name "`n---------------------------`n"
-    #Iterate through Each User in the group
-    foreach ($User in $Group.Users) {
-        Write-Host $User.Name  "`t" $User.LoginName  "`t"  $User.Email  | Format-Table
+    [string]$Tenant,
+
+    [string[]]$GroupName
+)
+
+$parameters = @{ Url = $SiteUrl.AbsoluteUri; Interactive = $true; ClientId = $ClientId }
+if ($Tenant) { $parameters.Tenant = $Tenant }
+Connect-PnPOnline @parameters
+
+try {
+    $groups = if ($GroupName) {
+        foreach ($name in $GroupName) { Get-PnPGroup -Identity $name }
     }
-    Write-Host "=================================="  #Group Separator
+    else {
+        Get-PnPGroup
+    }
+
+    foreach ($group in $groups) {
+        foreach ($member in Get-PnPGroupMember -Group $group) {
+            [pscustomobject]@{
+                SiteUrl       = $SiteUrl.AbsoluteUri
+                GroupName     = $group.Title
+                DisplayName   = $member.Title
+                LoginName     = $member.LoginName
+                Email         = $member.Email
+                PrincipalType = $member.PrincipalType
+            }
+        }
+    }
+}
+finally {
+    Disconnect-PnPOnline -ErrorAction SilentlyContinue
 }

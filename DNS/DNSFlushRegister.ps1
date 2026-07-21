@@ -1,8 +1,15 @@
 <#
 .SYNOPSIS
-    Registers DNS flush.
+    Clears the Windows DNS client cache and registers DNS records.
 #>
 
-ipconfig /flushdns
-Start-Sleep 1
-ipconfig /registerdns
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param()
+
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, 'Clear the DNS client cache and register DNS records')) {
+    Clear-DnsClientCache
+    Register-DnsClient
+}

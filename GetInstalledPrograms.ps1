@@ -1,21 +1,26 @@
 <#
 .SYNOPSIS
-    Retrieves installed programs.
+    Lists installed Windows programs from uninstall registry entries.
 #>
 
-# Get Installed Software
-# Define the registry paths
-$paths = @(
-    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
-    'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' # For 32-bit apps on 64-bit OS
+[CmdletBinding()]
+param(
+    [switch]$IncludeCurrentUser
 )
 
-# Query the registry, filter out entries without display names, select desired properties, and format
-Get-ItemProperty $paths -ErrorAction SilentlyContinue |
-    Where-Object { $_.DisplayName -ne $null -and $_.DisplayName -ne '' } |
-    Select-Object @{Name='Vendor'; Expression={$_.Publisher}},
-                  @{Name='Name'; Expression={$_.DisplayName}},
-                  @{Name='Version'; Expression={$_.DisplayVersion}},
-                  InstallDate |
-    Sort-Object Vendor, Name |
-    Format-Table -AutoSize
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+$paths = @(
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+    'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+if ($IncludeCurrentUser) {
+    $paths += 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+}
+
+Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+    Where-Object DisplayName |
+    Sort-Object Publisher, DisplayName, DisplayVersion -Unique |
+    Select-Object @{ Name = 'Vendor'; Expression = { $_.Publisher } },
+    @{ Name = 'Name'; Expression = { $_.DisplayName } },
+    @{ Name = 'Version'; Expression = { $_.DisplayVersion } },
+    InstallDate, InstallLocation, UninstallString, PSPath

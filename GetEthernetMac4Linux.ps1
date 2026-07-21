@@ -1,8 +1,24 @@
 <#
 .SYNOPSIS
-    Retrieves ethernet mac 4 linux.
+    Returns MAC addresses for active network interfaces on Linux.
 #>
 
-# Get Mac Address of Ethernet Interface
-$mac = ifconfig en0 | grep ether | awk '{print $2}'
-Write-Output "The MAC Address of your ethernet adapter is $mac"
+#Requires -Version 7.0
+
+[CmdletBinding()]
+param(
+    [string]$Name
+)
+
+if (-not $IsLinux) {
+    throw 'This script is intended for Linux. Use GetEthernetMac4Windows.ps1 on Windows.'
+}
+
+[System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
+    Where-Object {
+        $_.NetworkInterfaceType -ne [System.Net.NetworkInformation.NetworkInterfaceType]::Loopback -and
+        $_.OperationalStatus -eq [System.Net.NetworkInformation.OperationalStatus]::Up -and
+        (-not $Name -or $_.Name -like $Name)
+    } |
+    Select-Object Name, Description, InterfaceType, OperationalStatus,
+        @{Name = 'MacAddress'; Expression = { $_.GetPhysicalAddress().ToString() -replace '(..)(?=.)', '$1:' } }

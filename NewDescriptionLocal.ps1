@@ -1,6 +1,18 @@
 <#
 .SYNOPSIS
-    Creates description local.
+    Sets the local Windows computer description.
 #>
 
-Set-CimInstance -Query "SELECT * FROM Win32_OperatingSystem" -Property @{ Description = "ComputerName" }
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Description
+)
+
+if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Set computer description to '$Description'")) {
+    Get-CimInstance -ClassName Win32_OperatingSystem |
+        Set-CimInstance -Property @{ Description = $Description }
+}

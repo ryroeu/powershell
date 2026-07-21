@@ -20,10 +20,6 @@ vCPU count (default 2).
 Virtual switch to connect the NIC to (default 'Default Switch' if present).
 .PARAMETER ISOPath
 Path to Windows Server ISO (2022 or 2025).
-.PARAMETER OSVersion
-2022 or 2025. Default 2025.
-.PARAMETER InstallIndex
-Image index to boot when using the ISO (default 1). Kept for compatibility when using autounattend.
 .PARAMETER EnableTPM
 Switch. Adds a vTPM with a local key protector.
 .PARAMETER Checkpoints
@@ -39,8 +35,6 @@ Enable automatic checkpoints (default: Off).
 [Parameter()] [int]$CPU = 2,
 [Parameter()] [string]$SwitchName,
 [Parameter()] [string]$ISOPath,
-[ValidateSet('2022','2025')] [string]$OSVersion = '2025',
-[int]$InstallIndex = 1,
 [switch]$EnableTPM,
 [switch]$Checkpoints
 )

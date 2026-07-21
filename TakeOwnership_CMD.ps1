@@ -3,7 +3,7 @@
     Takes ownership of a folder and its contents using cmd.
 #>
 
-﻿function Set-AdminOwnershipAndPermission {
+function Set-AdminOwnershipAndPermission {
     [CmdletBinding(SupportsShouldProcess=$true)] # Adds -WhatIf and -Confirm support
     param(
         [Parameter(Mandatory=$true, Position=0)]

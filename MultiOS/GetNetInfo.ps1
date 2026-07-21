@@ -245,7 +245,10 @@ function Get-HostScanTarget {
         [int]$Prefix,
 
         [Parameter(Mandatory)]
-        [string]$LocalIPAddress
+        [string]$LocalIPAddress,
+
+        [Parameter(Mandatory)]
+        [int]$MaximumHosts
     )
 
     if ($Prefix -ge 31) {
@@ -256,8 +259,8 @@ function Get-HostScanTarget {
     $hostBits = 32 - $Prefix
     $usableHosts = [int64]([math]::Pow(2, $hostBits) - 2)
 
-    if ($usableHosts -gt $MaxHostsToScan) {
-        Write-Warning "Skipping host scan for $NetworkAddress/$Prefix because it contains $usableHosts hosts, which exceeds the limit of $MaxHostsToScan."
+    if ($usableHosts -gt $MaximumHosts) {
+        Write-Warning "Skipping host scan for $NetworkAddress/$Prefix because it contains $usableHosts hosts, which exceeds the limit of $MaximumHosts."
         return $null
     }
 
@@ -279,12 +282,14 @@ function Get-HostScanTarget {
 function Test-HostReachable {
     param(
         [Parameter(Mandatory)]
-        [string]$IPAddress
+        [string]$IPAddress,
+
+        [int]$TimeoutMilliseconds
     )
 
     $ping = [System.Net.NetworkInformation.Ping]::new()
     try {
-        $reply = $ping.Send($IPAddress, $PingTimeoutMilliseconds)
+        $reply = $ping.Send($IPAddress, $TimeoutMilliseconds)
         return $reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
     } catch {
         return $false
@@ -297,12 +302,14 @@ function Test-HostReachable {
 function Test-PingCapability {
     param(
         [Parameter(Mandatory)]
-        [string]$IPAddress
+        [string]$IPAddress,
+
+        [int]$TimeoutMilliseconds
     )
 
     $ping = [System.Net.NetworkInformation.Ping]::new()
     try {
-        $null = $ping.Send($IPAddress, [Math]::Max($PingTimeoutMilliseconds, 250))
+        $null = $ping.Send($IPAddress, [Math]::Max($TimeoutMilliseconds, 250))
         return $true
     } catch {
         return $false
@@ -313,11 +320,18 @@ function Test-PingCapability {
 
 # Function: Discover active hosts on the network
 function Get-ActiveHost {
-    if ($SkipHostScan) {
+    param(
+        [bool]$Skip,
+        [int]$MaximumHosts,
+        [int]$TimeoutMilliseconds,
+        [int]$ParallelThrottleLimit
+    )
+
+    if ($Skip) {
         return "Skipped"
     }
 
-    $targets = Get-HostScanTarget -NetworkAddress $networkAddress -Prefix $cidrPrefix -LocalIPAddress $localIP
+    $targets = Get-HostScanTarget -NetworkAddress $networkAddress -Prefix $cidrPrefix -LocalIPAddress $localIP -MaximumHosts $MaximumHosts
     if ($null -eq $targets) {
         return "Skipped"
     }
@@ -327,7 +341,7 @@ function Get-ActiveHost {
     }
 
     $probeTarget = if ($routerLocalIP -and $routerLocalIP -ne "Unavailable") { $routerLocalIP } else { $targets[0] }
-    if (-not (Test-PingCapability -IPAddress $probeTarget)) {
+    if (-not (Test-PingCapability -IPAddress $probeTarget -TimeoutMilliseconds $TimeoutMilliseconds)) {
         Write-Warning "ICMP probing is unavailable on this system or network; host scan skipped."
         return "Unavailable"
     }
@@ -336,29 +350,30 @@ function Get-ActiveHost {
         $activeHosts = $targets | ForEach-Object -Parallel {
             $ping = [System.Net.NetworkInformation.Ping]::new()
             try {
-                $reply = $ping.Send($_, $using:PingTimeoutMilliseconds)
+                $reply = $ping.Send($_, $using:TimeoutMilliseconds)
                 if ($reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
                     $_
                 }
             } catch {
+                Write-Verbose "Ping to '$_' failed."
             } finally {
                 $ping.Dispose()
             }
-        } -ThrottleLimit $ThrottleLimit
+        } -ThrottleLimit $ParallelThrottleLimit
 
         return @($activeHosts).Count
     }
 
     $activeCount = 0
     foreach ($target in $targets) {
-        if (Test-HostReachable -IPAddress $target) {
+        if (Test-HostReachable -IPAddress $target -TimeoutMilliseconds $TimeoutMilliseconds) {
             $activeCount++
         }
     }
 
     return $activeCount
 }
-$deviceCount = Get-ActiveHost
+$deviceCount = Get-ActiveHost -Skip $SkipHostScan -MaximumHosts $MaxHostsToScan -TimeoutMilliseconds $PingTimeoutMilliseconds -ParallelThrottleLimit $ThrottleLimit
 
 # Output results
 $result = [PSCustomObject]@{

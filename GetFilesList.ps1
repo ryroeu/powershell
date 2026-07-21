@@ -1,8 +1,19 @@
 <#
 .SYNOPSIS
-    Retrieves files list.
+    Exports a sorted file inventory to CSV.
 #>
 
-Get-ChildItem -Path C:\Windows\System32 -Recurse -File | `
-    Select-Object -Property Name | Sort-Object -Property Name | `
-    Export-Csv -Path C:\Temp\System32Files.csv -UseCulture
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path,
+
+    [string]$OutputPath = (Join-Path $PWD 'Files.csv'),
+
+    [switch]$Recurse
+)
+
+Get-ChildItem -LiteralPath $Path -File -Recurse:$Recurse |
+    Select-Object Name, FullName, Length, CreationTimeUtc, LastWriteTimeUtc |
+    Sort-Object FullName |
+    Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8

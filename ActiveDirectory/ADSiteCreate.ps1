@@ -1,9 +1,23 @@
 <#
 .SYNOPSIS
-Creates a new Active Directory replication site.
-
-.DESCRIPTION
-Includes brief planning notes for site, subnet, and site-link design before creating the new site object.
+    Creates an Active Directory replication site.
 #>
-# Create New Site in AD
-New-ADReplicationSite -Name "Site2”
+
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Name,
+
+    [string]$Description,
+
+    [string]$Server
+)
+
+$parameters = @{ Name = $Name }
+if ($Description) { $parameters.Description = $Description }
+if ($Server) { $parameters.Server = $Server }
+if ($PSCmdlet.ShouldProcess($Name, 'Create Active Directory replication site')) {
+    New-ADReplicationSite @parameters -PassThru
+}

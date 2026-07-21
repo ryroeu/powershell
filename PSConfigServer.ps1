@@ -5,7 +5,7 @@
     Manages powershell config server.
 #>
 
-[CmdletBinding(SupportsShouldProcess = $true)]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [switch]$EnableCredSSP,
 
@@ -13,8 +13,9 @@ param(
     [string]$ExecutionPolicy = 'DoNotChange'
 )
 
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+
 if ($PSCmdlet.ShouldProcess('WinRM', 'Enable PowerShell remoting on this server')) {
-    Set-WSManQuickConfig -Force | Out-Null
     Enable-PSRemoting -Force -SkipNetworkProfileCheck
 }
 

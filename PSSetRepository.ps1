@@ -1,6 +1,15 @@
 <#
 .SYNOPSIS
-    Sets PowerShell repository.
+    Sets the trusted state of a PSResourceGet repository.
 #>
 
-Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [string]$Name = 'PSGallery',
+
+    [bool]$Trusted = $true
+)
+
+if ($PSCmdlet.ShouldProcess($Name, "Set repository trusted state to $Trusted")) {
+    Set-PSResourceRepository -Name $Name -Trusted:$Trusted -PassThru
+}

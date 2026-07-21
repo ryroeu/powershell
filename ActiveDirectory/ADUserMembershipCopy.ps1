@@ -1,16 +1,32 @@
 <#
 .SYNOPSIS
-    Copies Active Directory user membership.
+    Copies Active Directory group memberships from one user to one or more destination users.
 #>
 
-# CHANGE VARIABLES TO YOUR NEEDS #
-$Server = "domain.com" #Domain that Users are in
-$SourceUser = Get-ADUser -Identity "SamAccountName" -Server $Server #User (SAMAccountName) you are copying 'MemberOf' Groups from
-$DestUser = Get-ADUser -Identity "SamAccountName" -Server $Server #User (SAMAccountName) you are copying 'MemberOf' Groups to
-#$DestUserList = #List of Users (SAMAccountName)s you are copying 'MemberOf' Groups to - Optional
+#Requires -Modules ActiveDirectory
 
-Get-ADPrincipalGroupMembership $SourceUser | Select-Object SamAccountName | Export-Csv -Path "C:\ExportDir\Groups.csv"
-$Groups = Import-Csv -Path "C:\ExportDir\Groups.csv"
-foreach ($Group in $Groups) {
-    Add-ADPrincipalGroupMembership -Identity $DestUser -MemberOf $Group
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$SourceUser,
+
+    [Parameter(Mandatory)]
+    [string[]]$DestinationUser,
+
+    [string]$Server
+)
+
+$parameters = @{}
+if ($Server) { $parameters.Server = $Server }
+$source = Get-ADUser -Identity $SourceUser @parameters
+$groups = @(Get-ADPrincipalGroupMembership -Identity $source @parameters)
+
+foreach ($destinationName in $DestinationUser) {
+    $destination = Get-ADUser -Identity $destinationName @parameters
+    $currentGroupDns = @(Get-ADPrincipalGroupMembership -Identity $destination @parameters | Select-Object -ExpandProperty DistinguishedName)
+    foreach ($group in $groups | Where-Object DistinguishedName -NotIn $currentGroupDns) {
+        if ($PSCmdlet.ShouldProcess($destination.SamAccountName, "Add to group '$($group.Name)'")) {
+            Add-ADGroupMember -Identity $group -Members $destination @parameters
+        }
+    }
 }

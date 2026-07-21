@@ -1,50 +1,50 @@
 <#
 .SYNOPSIS
-    Retrieves computer information.
+    Collects a structured Windows computer inventory.
 #>
 
-function Get-PCinfo {
-    Write-Host "Getting OS Info.." -ForegroundColor Magenta
-    systeminfo | findstr /B /C:"OS Name" /B /C:"OS Version" | Format-Table -AutoSize
+[CmdletBinding()]
+param(
+    [ValidateRange(1, 100)]
+    [int]$TopProcessCount = 10,
 
-    Write-Host "Getting LoggedOn User.." -ForegroundColor Magenta
-    Get-CimInstance Win32_LoggedOnUser | Select-Object PSComputerName, Antecedent, Dependent | Format-Table -AutoSize
+    [switch]$IncludeLicensing
+)
 
-    Write-Host "Getting BIOS Version.." -ForegroundColor Magenta
-    Get-CimInstance Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate, SerialNumber | Format-Table -AutoSize
-
-    Write-Host "Getting CPU Info.." -ForegroundColor Magenta
-    Get-CimInstance Win32_Processor | Select-Object Name, MaxClockSpeed, NumberOfCores | Format-Table -AutoSize
-
-    Write-Host "Getting 10 highest processes on CPU Usage.." -ForegroundColor Magenta
-    Get-Process | Where-Object Path -notlike ($env:WINDIR + "*") | Sort-Object CPU | Select-Object Name, CPU, StartTime | Select-Object -Last 10 | Sort-Object CPU -Descending | Format-Table -AutoSize
-
-    Write-Host "Getting Disk info.." -ForegroundColor Magenta
-    Get-Disk | Format-Table -AutoSize
-
-    Write-Host "Getting Disk Status.." -ForegroundColor Magenta
-    Get-Volume | Where-Object DriveLetter -EQ "C" | Format-Table -AutoSize
-
-    Write-Host "Getting Network Adapter info.." -ForegroundColor Magenta
-    Get-NetAdapter | Sort-Object Name | Format-Table -AutoSize
-
-    Write-Host "Getting Network Connection info.." -ForegroundColor Magenta
-    Get-NetConnectionProfile | Select-Object Name, InterfaceAlias, IPv4Connectivity, IPv6Connectivity, NetworkCategory | Format-Table -AutoSize
-
-    Write-Host "Getting IPv4 Addresses.." -ForegroundColor Magenta
-    Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress | Sort-Object InterfaceAlias | Format-Table -AutoSize
-
-    Write-Host "Getting DNS IPv4 info.." -ForegroundColor Magenta
-    Get-DnsClientServerAddress -AddressFamily IPv4 | Sort-Object InterfaceAlias | Format-Table -AutoSize
-
-    Write-Host "Getting IPv6 Addresses.." -ForegroundColor Magenta
-    Get-NetIPAddress -AddressFamily IPv6 | Select-Object InterfaceAlias, IPAddress | Sort-Object InterfaceAlias | Format-Table -AutoSize
-
-    Write-Host "Getting DNS IPv6 info.." -ForegroundColor Magenta
-    Get-DnsClientServerAddress -AddressFamily IPv6 | Sort-Object InterfaceAlias | Format-Table -AutoSize
-
-    Write-Host "Getting Licensing Status.."  -ForegroundColor Magenta
-    cscript C:\Windows\System32\slmgr.vbs /dlv
+if (-not $IsWindows) {
+    throw 'This script requires Windows.'
 }
-Get-PCinfo
-Read-Host -Prompt "Press Enter to exit"
+
+$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+$operatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem
+$bios = Get-CimInstance -ClassName Win32_BIOS
+$processors = @(Get-CimInstance -ClassName Win32_Processor)
+
+$result = [ordered]@{
+    ComputerName       = $computerSystem.Name
+    LoggedOnUser       = $computerSystem.UserName
+    Manufacturer       = $computerSystem.Manufacturer
+    Model              = $computerSystem.Model
+    OperatingSystem    = $operatingSystem.Caption
+    OSVersion          = $operatingSystem.Version
+    OSBuild             = $operatingSystem.BuildNumber
+    LastBootTime       = $operatingSystem.LastBootUpTime
+    BiosManufacturer   = $bios.Manufacturer
+    BiosVersion        = $bios.SMBIOSBIOSVersion
+    BiosSerialNumber   = $bios.SerialNumber
+    Processor          = $processors | Select-Object Name, MaxClockSpeed, NumberOfCores, NumberOfLogicalProcessors
+    Disk               = @(Get-Disk | Select-Object Number, FriendlyName, PartitionStyle, OperationalStatus, HealthStatus, Size)
+    Volume             = @(Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, HealthStatus, Size, SizeRemaining)
+    NetworkAdapter     = @(Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress)
+    NetworkProfile     = @(Get-NetConnectionProfile | Select-Object Name, InterfaceAlias, IPv4Connectivity, IPv6Connectivity, NetworkCategory)
+    IPAddress          = @(Get-NetIPAddress | Select-Object InterfaceAlias, AddressFamily, IPAddress, PrefixLength)
+    DnsServer          = @(Get-DnsClientServerAddress | Select-Object InterfaceAlias, AddressFamily, ServerAddresses)
+    TopProcessByCpu    = @(Get-Process | Sort-Object CPU -Descending | Select-Object -First $TopProcessCount Name, Id, CPU, WorkingSet64)
+}
+
+if ($IncludeLicensing) {
+    $result.Licensing = @(Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "PartialProductKey IS NOT NULL" |
+            Select-Object Name, Description, LicenseStatus, PartialProductKey)
+}
+
+[pscustomobject]$result

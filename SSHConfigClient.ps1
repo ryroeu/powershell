@@ -1,9 +1,22 @@
 <#
 .SYNOPSIS
-    Manages sshc onfig client.
+    Installs the Windows OpenSSH client capability.
 #>
 
-Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-Start-Service sshd
-Set-Service -Name sshd -StartupType 'Automatic'
-Get-NetFirewallRule -Name *ssh*
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param()
+
+$capability = Get-WindowsCapability -Online -Name 'OpenSSH.Client*' -ErrorAction Stop |
+    Select-Object -First 1
+if (-not $capability) {
+    throw 'The OpenSSH.Client Windows capability is not available on this operating system.'
+}
+
+if ($capability.State -ne 'Installed' -and $PSCmdlet.ShouldProcess('OpenSSH.Client', 'Install Windows capability')) {
+    Add-WindowsCapability -Online -Name $capability.Name
+}
+else {
+    $capability
+}

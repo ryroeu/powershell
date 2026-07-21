@@ -1,48 +1,54 @@
 <#
 .SYNOPSIS
-Configures the server hardening settings and audit rules documented in this script.
-
+    Applies a small, explicit Windows Server hardening baseline.
 .DESCRIPTION
-This script applies a set of hardening changes including file and registry audit rules,
-UAC configuration, and terminal services idle session limits.
-
-!!! Do not setup audit on C: drive with this script, it's not behaving properly!
-
-Script tested and verified working on Windows Server 2012 R2 Standard/Datacenter.
-
-Script requires to enable SeRestorePrivilege for the current PowerShell process.
-Please see https://gallery.technet.microsoft.com/Adjusting-Token-Privileges-9b6724fc for how to do this prior to executing the script.
-
-To be executed from C: root directory.
-Time running approximately: 5 minutes.
+    Ensures UAC remains enabled, configures a Remote Desktop idle timeout, and optionally adds
+    successful change/take-ownership auditing to specified files or directories.
 #>
 
-# For all files in file.txt audit will be set for everyone for "Success" on this object only, permissions are not affected
+#Requires -RunAsAdministrator
 
-Install-Module -Name AuditPolicyDsc -Force
-Install-Module -Name ComputerManagementDsc -Force
-Install-Module -Name SecurityPolicyDsc -Force
-Install-Module -Name PSDesiredStateConfiguration -Force
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [ValidateRange(1, 1440)]
+    [int]$RemoteDesktopIdleMinutes = 20,
 
-$ServerList = Get-Content ".\Servers.txt"
-foreach ($Server in $ServerList) {
-    $ACL = Get-Acl -Audit -Path $Server # Getting the audit settings on the file from the list
-    $ACE = New-Object System.Security.AccessControl.FileSystemAuditRule("Everyone","TakeOwnership,ChangePermissions","None","InheritOnly","Success") # Creating a new object to comply with audit requirement
-    $ACL.AddAuditRule($Ace) # Append the new audit settings to the current ones
-    Write-Host "Changing audit on $Server" # Setting the audit logging
-    $ACL | Set-Acl -Path $Server -Confirm -ErrorAction Inquire
+    [string[]]$AuditPath
+)
+
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+
+$systemPolicyPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+if ($PSCmdlet.ShouldProcess($systemPolicyPath, 'Enable User Account Control')) {
+    Set-ItemProperty -Path $systemPolicyPath -Name EnableLUA -Type DWord -Value 1 -ErrorAction Stop
 }
 
-Set-Location HKLM:\System
-$RegistryKey = 'HKLM:\System\CurrentControlSet\Services\EventLog\Security'
-$ACLRK = Get-Acl -Audit -Path $RegistryKey # Getting the audit settings on the registry key
-$ACERK = New-Object System.Security.AccessControl.RegistryAuditRule("Everyone","CreateLink","None","InheritOnly","Success") # Creating a new object audit settings
-$ACLRK.AddAuditRule($AceRK) # Append the new audit settings to the current ones
-Write-Host "Changing audit on HKLM:\System\CurrentControlSet\Services\EventLog\Security" # Setting the audit logging
-$ACLRK | Set-Acl -Path $RegistryKey -Confirm -ErrorAction Inquire
+$terminalServicesPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
+if ($PSCmdlet.ShouldProcess($terminalServicesPath, "Set idle timeout to $RemoteDesktopIdleMinutes minute(s)")) {
+    New-Item -Path $terminalServicesPath -Force | Out-Null
+    Set-ItemProperty -Path $terminalServicesPath -Name MaxIdleTime -Type DWord -Value ($RemoteDesktopIdleMinutes * 60000) -ErrorAction Stop
+}
 
-Set-Location C:\
-Write-Host "Changing HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\system\EnableLUA to 0" # Changing registry value from 1 to 0
-Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\system -Name EnableLUA -Value 0
-Write-Host "Changing HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services: Idle Session limit to 20 minutes" # Adding MaxIdleTime new registry key
-Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name MaxIdleTime -Value 1200000
+$everyoneSid = [Security.Principal.SecurityIdentifier]::new('S-1-1-0')
+foreach ($itemPath in $AuditPath) {
+    $item = Get-Item -LiteralPath $itemPath -Force -ErrorAction Stop
+    $inheritance = if ($item.PSIsContainer) {
+        [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
+    }
+    else {
+        [Security.AccessControl.InheritanceFlags]::None
+    }
+    $rule = [Security.AccessControl.FileSystemAuditRule]::new(
+        $everyoneSid,
+        [Security.AccessControl.FileSystemRights]'TakeOwnership, ChangePermissions',
+        $inheritance,
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AuditFlags]::Success
+    )
+
+    if ($PSCmdlet.ShouldProcess($item.FullName, 'Add successful permission-change audit rule')) {
+        $acl = Get-Acl -LiteralPath $item.FullName -Audit
+        $acl.AddAuditRule($rule)
+        Set-Acl -LiteralPath $item.FullName -AclObject $acl -ErrorAction Stop
+    }
+}

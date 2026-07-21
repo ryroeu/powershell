@@ -1,174 +1,103 @@
-﻿<#
+<#
 .SYNOPSIS
-    Sets the computer name (hostname) and configures a static IP address on Windows, macOS, or Linux.
-
-.DESCRIPTION
-    This script accepts parameters for a new computer name, an IP address, subnet mask (in dotted-decimal notation), gateway, and one or more DNS server addresses.
-    It then detects the operating system and runs the appropriate commands:
-      • Windows: Uses built-in cmdlets (Rename-Computer, New-NetIPAddress, Set-DnsClientServerAddress).
-      • Linux: Uses sudo with hostnamectl and nmcli (requires NetworkManager).
-      • macOS: Uses sudo with scutil and networksetup.
-    You can optionally specify the network interface name. If not provided, the script uses a default value for each OS.
-
-.PARAMETER ComputerName
-    The new computer name/hostname.
-
-.PARAMETER IPAddress
-    The static IP address to set.
-
-.PARAMETER SubnetMask
-    The subnet mask in dotted-decimal notation (e.g., 255.255.255.0).
-
-.PARAMETER Gateway
-    The default gateway address.
-
-.PARAMETER DNS
-    One or more DNS server addresses.
-
-.PARAMETER InterfaceName
-    (Optional) The network interface name. Defaults are:
-      - Windows: "Ethernet"
-      - Linux: "eth0"
-      - macOS: "Wi-Fi"
-
-.EXAMPLE
-    .\SetComputerNameAndIP.ps1 -ComputerName "MyComputer" -IPAddress "192.168.1.100" -SubnetMask "255.255.255.0" -Gateway "192.168.1.1" -DNS "8.8.8.8","8.8.4.4"
+    Sets the host name and a static IPv4 configuration on Windows, Linux, or macOS.
 #>
 
+#Requires -Version 7.0
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$ComputerName,
+    [Parameter(Mandatory)]
+    [string]$NewComputerName,
 
-    [Parameter(Mandatory=$true)]
-    [string]$IPAddress,
+    [Parameter(Mandatory)]
+    [ipaddress]$IPAddress,
 
-    [Parameter(Mandatory=$true)]
-    [string]$SubnetMask,
+    [Parameter(Mandatory)]
+    [ValidateRange(0, 32)]
+    [int]$PrefixLength,
 
-    [Parameter(Mandatory=$true)]
-    [string]$Gateway,
+    [Parameter(Mandatory)]
+    [ipaddress]$Gateway,
 
-    [Parameter(Mandatory=$true)]
-    [string[]]$DNS,
+    [Parameter(Mandatory)]
+    [ipaddress[]]$DnsServer,
 
-    [Parameter(Mandatory=$false)]
-    [string]$InterfaceName
+    [Parameter(Mandatory)]
+    [string]$InterfaceName,
+
+    [switch]$Restart
 )
 
-# Helper function to convert a dotted-decimal subnet mask to prefix length (e.g. "255.255.255.0" => 24)
-function ConvertTo-PrefixLength {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$SubnetMask
-    )
-    $octets = $SubnetMask.Split('.')
-    if ($octets.Count -ne 4) {
-        Write-Error "Invalid Subnet Mask format."
-        exit 1
-    }
-    $binary = $octets | ForEach-Object { [Convert]::ToString([int]$_,2).PadLeft(8,'0') }
-    $ones = ($binary -join "" | Select-String -Pattern "1").Matches.Count
-    return $ones
+if ($IPAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+    $Gateway.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) {
+    throw 'IPAddress and Gateway must be IPv4 addresses.'
 }
-
-# Calculate prefix length (used for Windows and Linux)
-$prefixLength = ConvertTo-PrefixLength -SubnetMask $SubnetMask
 
 if ($IsWindows) {
-    Write-Host "Operating System: Windows" -ForegroundColor Green
-
-    # Set the computer name
-    try {
-        Rename-Computer -NewName $ComputerName -Force -ErrorAction Stop
-        Write-Host "Computer name set to $ComputerName. A restart may be required for the change to take effect." -ForegroundColor Green
+    if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Rename to '$NewComputerName'")) {
+        Rename-Computer -NewName $NewComputerName -Force -Restart:$false -ErrorAction Stop
     }
-    catch {
-        Write-Error "Failed to rename computer: $_"
+    if ($PSCmdlet.ShouldProcess($InterfaceName, "Set $IPAddress/$PrefixLength with gateway $Gateway")) {
+        New-NetIPAddress -InterfaceAlias $InterfaceName -IPAddress $IPAddress -PrefixLength $PrefixLength -DefaultGateway $Gateway -ErrorAction Stop
+        Set-DnsClientServerAddress -InterfaceAlias $InterfaceName -ServerAddresses $DnsServer.IPAddressToString -ErrorAction Stop
     }
-
-    # Use default interface if not provided
-    if (-not $InterfaceName) { $InterfaceName = "Ethernet" }
-
-    # Configure the static IP address
-    try {
-        New-NetIPAddress -InterfaceAlias $InterfaceName -IPAddress $IPAddress -PrefixLength $prefixLength -DefaultGateway $Gateway -ErrorAction Stop
-        Write-Host "IP address $IPAddress configured on interface $InterfaceName." -ForegroundColor Green
+    if ($Restart -and $PSCmdlet.ShouldProcess($env:COMPUTERNAME, 'Restart computer')) {
+        Restart-Computer -Force
     }
-    catch {
-        Write-Error "Failed to set IP address: $_"
-    }
-
-    # Set DNS server addresses
-    try {
-        Set-DnsClientServerAddress -InterfaceAlias $InterfaceName -ServerAddresses $DNS -ErrorAction Stop
-        Write-Host "DNS servers set to $($DNS -join ', ')." -ForegroundColor Green
-    }
-    catch {
-        Write-Error "Failed to set DNS servers: $_"
-    }
-
 }
 elseif ($IsLinux) {
-    Write-Host "Operating System: Linux" -ForegroundColor Green
-
-    # Set hostname
-    try {
-        sudo hostnamectl set-hostname $ComputerName
-        Write-Host "Hostname set to $ComputerName." -ForegroundColor Green
+    if ([Environment]::UserName -ne 'root') { throw 'Run this script as root on Linux.' }
+    foreach ($command in 'hostnamectl', 'nmcli') {
+        if (-not (Get-Command $command -CommandType Application -ErrorAction SilentlyContinue)) { throw "'$command' was not found." }
     }
-    catch {
-        Write-Error "Failed to set hostname: $_"
+    if ($PSCmdlet.ShouldProcess([Environment]::MachineName, "Rename to '$NewComputerName'")) {
+        & hostnamectl set-hostname $NewComputerName
+        if ($LASTEXITCODE -ne 0) { throw "hostnamectl failed with exit code $LASTEXITCODE." }
     }
-
-    # Use default interface if not provided
-    if (-not $InterfaceName) { $InterfaceName = "eth0" }
-
-    # Combine DNS servers into a comma-separated string for nmcli
-    $dnsList = $DNS -join ","
-
-    # Configure static IP address using nmcli (requires NetworkManager)
-    try {
-        sudo nmcli con mod "$InterfaceName" ipv4.addresses "$IPAddress/$prefixLength" ipv4.gateway $Gateway ipv4.dns "$dnsList" ipv4.method manual
-        sudo nmcli con up "$InterfaceName"
-        Write-Host "IP configuration applied on interface $InterfaceName." -ForegroundColor Green
+    if ($PSCmdlet.ShouldProcess($InterfaceName, "Set $IPAddress/$PrefixLength with gateway $Gateway")) {
+        & nmcli connection modify $InterfaceName ipv4.addresses "$IPAddress/$PrefixLength" ipv4.gateway $Gateway.IPAddressToString ipv4.dns ($DnsServer.IPAddressToString -join ',') ipv4.method manual
+        if ($LASTEXITCODE -ne 0) { throw "nmcli modify failed with exit code $LASTEXITCODE." }
+        & nmcli connection up $InterfaceName
+        if ($LASTEXITCODE -ne 0) { throw "nmcli activation failed with exit code $LASTEXITCODE." }
     }
-    catch {
-        Write-Error "Failed to configure network settings: $_"
+    if ($Restart -and $PSCmdlet.ShouldProcess([Environment]::MachineName, 'Restart computer')) {
+        & shutdown -r now
     }
 }
 elseif ($IsMacOS) {
-    Write-Host "Operating System: macOS" -ForegroundColor Green
-
-    # Set hostname
-    try {
-        sudo scutil --set HostName $ComputerName
-        Write-Host "Hostname set to $ComputerName." -ForegroundColor Green
+    if ([Environment]::UserName -ne 'root') { throw 'Run this script as root on macOS.' }
+    $maskOctets = for ($octet = 0; $octet -lt 4; $octet++) {
+        $bits = [Math]::Clamp($PrefixLength - ($octet * 8), 0, 8)
+        if ($bits -eq 0) { 0 } else { 256 - [Math]::Pow(2, 8 - $bits) }
     }
-    catch {
-        Write-Error "Failed to set hostname: $_"
+    $subnetMask = $maskOctets -join '.'
+    if ($PSCmdlet.ShouldProcess([Environment]::MachineName, "Rename to '$NewComputerName'")) {
+        foreach ($nameType in 'ComputerName', 'HostName', 'LocalHostName') {
+            & /usr/sbin/scutil --set $nameType $NewComputerName
+            if ($LASTEXITCODE -ne 0) { throw "scutil failed with exit code $LASTEXITCODE for '$nameType'." }
+        }
     }
-
-    # Use default interface if not provided
-    if (-not $InterfaceName) { $InterfaceName = "Wi-Fi" }
-
-    # Configure static IP address using networksetup
-    try {
-        sudo networksetup -setmanual $InterfaceName $IPAddress $SubnetMask $Gateway
-        Write-Host "IP address $IPAddress configured on interface $InterfaceName." -ForegroundColor Green
+    if ($PSCmdlet.ShouldProcess($InterfaceName, "Set $IPAddress/$PrefixLength with gateway $Gateway")) {
+        & /usr/sbin/networksetup -setmanual $InterfaceName $IPAddress.IPAddressToString $subnetMask $Gateway.IPAddressToString
+        if ($LASTEXITCODE -ne 0) { throw "networksetup failed with exit code $LASTEXITCODE." }
+        & /usr/sbin/networksetup -setdnsservers $InterfaceName $DnsServer.IPAddressToString
+        if ($LASTEXITCODE -ne 0) { throw "networksetup DNS configuration failed with exit code $LASTEXITCODE." }
     }
-    catch {
-        Write-Error "Failed to set IP address: $_"
-    }
-
-    # Set DNS servers
-    try {
-        sudo networksetup -setdnsservers $InterfaceName $DNS
-        Write-Host "DNS servers set to $($DNS -join ', ')." -ForegroundColor Green
-    }
-    catch {
-        Write-Error "Failed to set DNS servers: $_"
+    if ($Restart -and $PSCmdlet.ShouldProcess([Environment]::MachineName, 'Restart computer')) {
+        & /sbin/shutdown -r now
     }
 }
 else {
-    Write-Error "Unsupported operating system."
+    throw "Unsupported platform '$($PSVersionTable.Platform)'."
+}
+
+[pscustomobject]@{
+    ComputerName  = $NewComputerName
+    InterfaceName = $InterfaceName
+    IPAddress     = $IPAddress
+    PrefixLength  = $PrefixLength
+    Gateway       = $Gateway
+    DnsServer     = $DnsServer
+    Restart       = $Restart.IsPresent
 }

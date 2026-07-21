@@ -30,7 +30,7 @@ $chassisMap = @{
   36='Detachable'; 39='IoT Gateway'; 40='Embedded PC'; 41='Mini PC'; 42='Stick PC'
 }
 
-# Build a CIM session option that’s usually safe through firewalls (default WSMan)
+# Build a CIM session option that's usually safe through firewalls (default WSMan)
 $cimOpts = New-CimSessionOption -Protocol Wsman
 $cimSessions = @()
 

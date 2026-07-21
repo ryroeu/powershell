@@ -1,6 +1,16 @@
 <#
 .SYNOPSIS
-    Manages firewall enable all.
+    Enables selected Windows Defender Firewall profiles.
 #>
 
-Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [ValidateSet('Domain', 'Private', 'Public')]
+    [string[]]$FirewallProfile = @('Domain', 'Private', 'Public')
+)
+
+if ($PSCmdlet.ShouldProcess(($FirewallProfile -join ', '), 'Enable Windows Defender Firewall profiles')) {
+    Set-NetFirewallProfile -Profile $FirewallProfile -Enabled True
+}

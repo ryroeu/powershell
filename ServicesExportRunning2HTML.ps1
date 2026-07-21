@@ -1,9 +1,33 @@
 <#
 .SYNOPSIS
-    Manages services export running 2 html.
+    Exports running Windows services to an HTML report.
 #>
 
-### Export Running Service to HTML ###
-Get-Service | Where-Object {$_.status -eq "running"} `
-            | ConvertTo-HTML Name, DisplayName, Status `
-            | Set-Content C:\ExportDir\RunningServices.html
+[CmdletBinding()]
+param(
+    [string]$OutputPath = (Join-Path $PWD 'RunningServices.html'),
+
+    [string]$ComputerName = $env:COMPUTERNAME,
+
+    [pscredential]$Credential
+)
+
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+
+$isLocal = $ComputerName -in '.', 'localhost', $env:COMPUTERNAME
+if ($isLocal) {
+    $services = Get-Service | Where-Object Status -eq 'Running'
+}
+else {
+    $parameters = @{ ComputerName = $ComputerName; ErrorAction = 'Stop' }
+    if ($Credential) { $parameters.Credential = $Credential }
+    $services = Invoke-Command @parameters -ScriptBlock {
+        Get-Service | Where-Object Status -eq 'Running'
+    }
+}
+
+$services |
+    Select-Object Name, DisplayName, Status, StartType |
+    ConvertTo-Html -Title "Running services on $ComputerName" -PreContent "<h1>Running services on $ComputerName</h1>" |
+    Set-Content -LiteralPath $OutputPath -Encoding utf8NoBOM
+Get-Item -LiteralPath $OutputPath

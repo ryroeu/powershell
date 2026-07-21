@@ -455,5 +455,4 @@ $diskData = Get-DiskInfoAdvanced
 $diskData |
     Select-Object Platform, DiskNum, Device, Model, Type,
         @{ Name = 'DiskSizeGB'; Expression = { [math]::Round([double]$_.DiskSize / 1GB, 2) } },
-        AccessPath |
-    Format-Table -AutoSize
+        AccessPath

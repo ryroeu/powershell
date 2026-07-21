@@ -1,64 +1,60 @@
 <#
 .SYNOPSIS
-    Manages folder redirect fix.
+    Repairs the current user's legacy shell-folder registry values.
+.DESCRIPTION
+    Sets both Shell Folders and User Shell Folders from a caller-supplied root path. Group Policy
+    folder redirection should be repaired through Group Policy instead of with this script.
+.EXAMPLE
+    ./FolderRedirectFix.ps1 -RedirectRoot '\\FileServer\Users\Ryan'
 #>
 
-### {USER-STRING} ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "{USER-STRING}"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "{USER-STRING}" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Libraries"
+#Requires -RunAsAdministrator
 
-### Administrative Tools ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Administrative Tools"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Administrative Tools" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Start Menu\Programs\Administrative Tools"
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string]$RedirectRoot
+)
 
-### AppData ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "AppData"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "AppData" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming"
+if (-not $IsWindows) {
+    throw 'This script requires Windows.'
+}
 
-### Desktop ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Desktop"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Desktop" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Desktop"
+$redirectRoot = $RedirectRoot.TrimEnd('\')
+$folders = [ordered]@{
+    'Administrative Tools' = 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Administrative Tools'
+    AppData                = 'AppData\Roaming'
+    Desktop                = 'Desktop'
+    Favorites              = 'Favorites'
+    'My Pictures'          = 'Pictures'
+    NetHood                = 'AppData\Roaming\Microsoft\Windows\Network Shortcuts'
+    Personal               = 'Documents'
+    PrintHood              = 'AppData\Roaming\Microsoft\Windows\Printer Shortcuts'
+    Programs               = 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs'
+    Recent                 = 'AppData\Roaming\Microsoft\Windows\Recent'
+    SendTo                 = 'AppData\Roaming\Microsoft\Windows\SendTo'
+    'Start Menu'           = 'AppData\Roaming\Microsoft\Windows\Start Menu'
+    Startup                = 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup'
+    Templates              = 'AppData\Roaming\Microsoft\Windows\Templates'
+}
 
-### Favorites ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Favorites"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Favorites" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Favorites"
+$registryPaths = @(
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders',
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
+)
 
-### My Pictures ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "My Pictures"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "My Pictures" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Pictures"
+foreach ($registryPath in $registryPaths) {
+    if (-not (Test-Path -LiteralPath $registryPath)) {
+        New-Item -Path $registryPath -Force | Out-Null
+    }
 
-### NetHood ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "NetHood"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "NetHood" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Network Shortcuts"
+    foreach ($entry in $folders.GetEnumerator()) {
+        $value = Join-Path -Path $redirectRoot -ChildPath $entry.Value
+        if ($PSCmdlet.ShouldProcess("$registryPath :: $($entry.Key)", "Set value to '$value'")) {
+            New-ItemProperty -Path $registryPath -Name $entry.Key -Value $value -PropertyType String -Force | Out-Null
+        }
+    }
+}
 
-### Personal ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Documents"
-
-### PrintHood ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "PrintHood"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "PrintHood" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Printer Shortcuts"
-
-### Programs ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Programs"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Programs" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Start Menu\Programs"
-
-### Recent ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Recent"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Recent" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Recent"
-
-### SendTo ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "SendTo"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "SendTo" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\SendTo"
-
-### Start Menu ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Start Menu"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Start Menu" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Start Menu"
-
-### Startup ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Startup"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Startup" /t "REG_SZ" /d "\\ComputerName\Users\UserName\Start Menu\Programs\Startup"
-
-### Templates ###
-REG DELETE "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Templates"
-REG ADD "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Templates" /t "REG_SZ" /d "\\ComputerName\Users\UserName\AppData\Roaming\Microsoft\Windows\Templates"
+Write-Warning 'Sign out and back in before evaluating the repaired shell-folder paths.'

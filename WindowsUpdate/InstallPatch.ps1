@@ -1,139 +1,101 @@
 <#
 .SYNOPSIS
-    Installs patch.
+    Adds CAB or MSU update packages to an offline WIM or VHD/VHDX image.
 #>
 
-function Invoke-DismCommand {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [string[]]$ArgumentList
-    )
+#Requires -RunAsAdministrator
 
-    & dism.exe @ArgumentList
-    if ($LASTEXITCODE -ne 0) {
-        throw ('dism.exe failed with exit code {0}. Arguments: {1}' -f $LASTEXITCODE, ($ArgumentList -join ' '))
-    }
+[CmdletBinding(DefaultParameterSetName = 'Wim', SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory, ParameterSetName = 'Wim')]
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })]
+    [string]$WimPath,
+
+    [Parameter(Mandatory, ParameterSetName = 'Wim')]
+    [ValidateRange(1, 1000)]
+    [int]$WimIndex,
+
+    [Parameter(Mandatory, ParameterSetName = 'Vhd')]
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })]
+    [string]$VhdPath,
+
+    [Parameter(Mandatory)]
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Container })]
+    [string]$PatchPath,
+
+    [string]$MountPath = (Join-Path $env:TEMP 'PowerShellPatchMount'),
+
+    [switch]$ResetBase
+)
+
+if (-not $IsWindows) { throw 'This script requires Windows.' }
+$packages = @(Get-ChildItem -LiteralPath $PatchPath -Recurse -File |
+        Where-Object Extension -in '.cab', '.msu' |
+        Sort-Object FullName)
+if (-not $packages) { throw "No CAB or MSU packages were found below '$PatchPath'." }
+
+$target = if ($PSCmdlet.ParameterSetName -eq 'Wim') { "$WimPath (index $WimIndex)" } else { $VhdPath }
+if (-not $PSCmdlet.ShouldProcess($target, "Install $($packages.Count) update package(s)")) {
+    $packages
+    return
 }
 
-function Install-Patch {
-    <#
-    .SYNOPSIS
-        Patches a WIM or VHD file.
-    .DESCRIPTION
-        Applies downloaded .msu or .cab updates to a VHD/VHDX or WIM image.
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [string]$UpdateTargetPassed,
-
-        [Parameter(Mandatory)]
-        [string]$PatchPath
-    )
-
-    $isVhd = $UpdateTargetPassed.ToLowerInvariant().Contains('.vhd')
-    $updateTarget = $null
-    $updateTargetIndex = $null
-    $mountPath = $null
-
-    if ($isVhd) {
-        $updateTarget = $UpdateTargetPassed
-        if (-not (Test-Path -LiteralPath $updateTarget)) {
-            throw ('Source not found: {0}' -f $updateTarget)
-        }
-
-        Mount-VHD -Path $updateTarget -ErrorAction Stop
-        try {
-            $disk = Get-CimInstance -ClassName Win32_DiskDrive |
-                Where-Object Caption -eq 'Microsoft Virtual Disk' |
-                Select-Object -First 1
-
-            if (-not $disk) {
-                throw 'Unable to locate the mounted virtual disk.'
-            }
-
-            $updatedDrive = Get-CimAssociatedInstance -CimInstance $disk -ResultClassName Win32_DiskPartition |
-                ForEach-Object {
-                    Get-CimAssociatedInstance -CimInstance $_ -ResultClassName Win32_LogicalDisk
-                } |
-                Where-Object VolumeName -ne 'System Reserved' |
-                Select-Object -First 1
-
-            if (-not $updatedDrive) {
-                throw 'Unable to locate a usable logical disk on the mounted VHD.'
-            }
-
-            $mountPath = '{0}\' -f $updatedDrive.DeviceID
-            $updates = Get-ChildItem -Path $PatchPath -Recurse -File |
-                Where-Object { $_.Extension -in '.msu', '.cab' }
-
-            foreach ($update in $updates) {
-                Write-Verbose ('Applying {0}' -f $update.FullName)
-                Invoke-DismCommand -ArgumentList @(
-                    ('/Image:{0}' -f $mountPath),
-                    '/Add-Package',
-                    ('/PackagePath:{0}' -f $update.FullName)
-                )
-            }
-
-            Invoke-DismCommand -ArgumentList @(
-                ('/Image:{0}' -f $mountPath),
-                '/Cleanup-Image',
-                '/SPSuperseded'
-            )
-        }
-        finally {
-            Dismount-VHD -Path $updateTarget -Confirm:$false
-        }
-
-        return
+if ($PSCmdlet.ParameterSetName -eq 'Wim') {
+    if (-not (Get-Command Mount-WindowsImage -ErrorAction SilentlyContinue)) {
+        throw 'The DISM PowerShell module is required.'
     }
+    New-Item -ItemType Directory -Path $MountPath -Force | Out-Null
+    if (Get-ChildItem -LiteralPath $MountPath -Force) { throw "Mount path '$MountPath' must be empty." }
 
-    $targetParts = $UpdateTargetPassed.Split(':')
-    if ($targetParts.Count -ne 3) {
-        throw 'Missing index number for WIM file. Example: C:\Temp\install.wim:4'
-    }
-
-    $updateTarget = '{0}:{1}' -f $targetParts[0], $targetParts[1]
-    $updateTargetIndex = $targetParts[2]
-    $mountPath = 'C:\WimMount'
-
-    if (-not (Test-Path -LiteralPath $mountPath)) {
-        New-Item -Path $mountPath -ItemType Directory -Force | Out-Null
-    }
-
-    Invoke-DismCommand -ArgumentList @(
-        '/Mount-Wim',
-        ('/WimFile:{0}' -f $updateTarget),
-        ('/Index:{0}' -f $updateTargetIndex),
-        ('/MountDir:{0}' -f $mountPath)
-    )
-
+    $saveImage = $false
+    Mount-WindowsImage -ImagePath $WimPath -Index $WimIndex -Path $MountPath -ErrorAction Stop | Out-Null
     try {
-        $updates = Get-ChildItem -Path $PatchPath -Recurse -File |
-            Where-Object { $_.Extension -in '.msu', '.cab' }
-
-        foreach ($update in $updates) {
-            Write-Verbose ('Applying {0}' -f $update.FullName)
-            Invoke-DismCommand -ArgumentList @(
-                ('/Image:{0}' -f $mountPath),
-                '/Add-Package',
-                ('/PackagePath:{0}' -f $update.FullName)
-            )
+        foreach ($package in $packages) {
+            Add-WindowsPackage -Path $MountPath -PackagePath $package.FullName -ErrorAction Stop | Out-Null
         }
-
-        Invoke-DismCommand -ArgumentList @(
-            ('/Image:{0}' -f $mountPath),
-            '/Cleanup-Image',
-            '/SPSuperseded'
-        )
+        if ($ResetBase) {
+            & "$env:SystemRoot\System32\dism.exe" "/Image:$MountPath" /Cleanup-Image /StartComponentCleanup /ResetBase
+            if ($LASTEXITCODE -ne 0) { throw "DISM cleanup failed with exit code $LASTEXITCODE." }
+        }
+        $saveImage = $true
     }
     finally {
-        Invoke-DismCommand -ArgumentList @(
-            '/Unmount-Wim',
-            ('/MountDir:{0}' -f $mountPath),
-            '/Commit'
-        )
+        if ($saveImage) {
+            Dismount-WindowsImage -Path $MountPath -Save -ErrorAction Stop | Out-Null
+        }
+        else {
+            Dismount-WindowsImage -Path $MountPath -Discard -ErrorAction Stop | Out-Null
+        }
     }
 }
+else {
+    if (-not (Get-Command Mount-VHD -ErrorAction SilentlyContinue)) {
+        throw 'The Hyper-V PowerShell module is required for VHD/VHDX images.'
+    }
+
+    $mountedVhd = Mount-VHD -Path $VhdPath -Passthru -ErrorAction Stop
+    try {
+        $disk = $mountedVhd | Get-Disk
+        $volumes = Get-Partition -DiskNumber $disk.Number -ErrorAction Stop |
+            Where-Object DriveLetter |
+            Get-Volume
+        $windowsVolume = $volumes | Where-Object {
+            Test-Path -LiteralPath "$($_.DriveLetter):\Windows\System32"
+        } | Select-Object -First 1
+        if (-not $windowsVolume) { throw 'No offline Windows volume was found in the mounted VHD.' }
+        $imagePath = "$($windowsVolume.DriveLetter):\"
+
+        foreach ($package in $packages) {
+            Add-WindowsPackage -Path $imagePath -PackagePath $package.FullName -ErrorAction Stop | Out-Null
+        }
+        if ($ResetBase) {
+            & "$env:SystemRoot\System32\dism.exe" "/Image:$imagePath" /Cleanup-Image /StartComponentCleanup /ResetBase
+            if ($LASTEXITCODE -ne 0) { throw "DISM cleanup failed with exit code $LASTEXITCODE." }
+        }
+    }
+    finally {
+        Dismount-VHD -Path $VhdPath -ErrorAction Stop
+    }
+}
+
+[pscustomobject]@{ Target = $target; PackageCount = $packages.Count; ResetBase = $ResetBase.IsPresent; Completed = $true }

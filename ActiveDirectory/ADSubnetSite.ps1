@@ -1,7 +1,19 @@
 <#
 .SYNOPSIS
-    Manages active directory subnet site.
+    Assigns an Active Directory replication subnet to a site.
 #>
 
-# Change the Site for AD Subnet
-Set-ADReplicationSubnet -Identity 10.0.0.0/8 -Site NewSiteName
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Identity,
+
+    [Parameter(Mandatory)]
+    [string]$Site
+)
+
+if ($PSCmdlet.ShouldProcess($Identity, "Assign subnet to site '$Site'")) {
+    Set-ADReplicationSubnet -Identity $Identity -Site $Site -PassThru
+}

@@ -1,7 +1,28 @@
 <#
 .SYNOPSIS
-    Stops get process.
+    Stops processes by name or process ID.
 #>
 
-Get-Process ProcessName | Stop Process -force
-Read-Host -Prompt "Press Enter to exit"
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High', DefaultParameterSetName = 'Name')]
+param(
+    [Parameter(Mandatory, ParameterSetName = 'Name')]
+    [string[]]$Name,
+
+    [Parameter(Mandatory, ParameterSetName = 'Id')]
+    [int[]]$Id,
+
+    [switch]$Force
+)
+
+$processes = if ($PSCmdlet.ParameterSetName -eq 'Id') {
+    Get-Process -Id $Id -ErrorAction Stop
+}
+else {
+    Get-Process -Name $Name -ErrorAction Stop
+}
+
+foreach ($process in $processes) {
+    if ($PSCmdlet.ShouldProcess("$($process.ProcessName) ($($process.Id))", 'Stop process')) {
+        $process | Stop-Process -Force:$Force
+    }
+}

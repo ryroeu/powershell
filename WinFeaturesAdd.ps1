@@ -1,7 +1,31 @@
 <#
 .SYNOPSIS
-    Adds Windows features.
+    Installs one or more Windows Server roles or features.
 #>
 
-# Istall Windows Feature on remote computer
-Install-WindowsFeature -Name "feature_name" -computerName "computer_name" -Restart
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string[]]$Name,
+
+    [string]$ComputerName = $env:COMPUTERNAME,
+
+    [switch]$IncludeManagementTools,
+
+    [switch]$Restart
+)
+
+$parameters = @{
+    Name                   = $Name
+    IncludeManagementTools = $IncludeManagementTools
+    Restart                = $Restart
+}
+if ($ComputerName -and $ComputerName -notin '.', 'localhost', $env:COMPUTERNAME) {
+    $parameters.ComputerName = $ComputerName
+}
+
+if ($PSCmdlet.ShouldProcess($ComputerName, "Install Windows feature(s): $($Name -join ', ')")) {
+    Install-WindowsFeature @parameters
+}

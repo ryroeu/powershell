@@ -6,7 +6,7 @@
 using namespace System.Management.Automation.Host
 
 <# FUNCTIONS #>
-function New-Menu {
+function Show-ChoiceMenu {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -48,7 +48,7 @@ function Show-Menu {
 
 
 <# EXECUTE MENU #>
-# New-Menu -Title 'Colors' -Question 'What is your favorite color?'
+# Show-ChoiceMenu -Title 'Colors' -Question 'What is your favorite color?'
 
 <# EXECUTE INTERACTIVE MENU #>
 do {
@@ -65,7 +65,9 @@ do {
             'You chose option #3'
         }
     }
-    pause
+    if ($selection -ne 'q') {
+        $null = Read-Host 'Press Enter to continue'
+    }
 }
 until (
     $selection -eq 'q'

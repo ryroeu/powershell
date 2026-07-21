@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   Bulk create/maintain DNS round-robin records on a Windows DNS Server from a CSV or JSON plan.
 
@@ -50,7 +50,7 @@ contoso.com,web,10.0.3.10;10.0.3.11,,30,FALSE,TRUE,TCP,443,
 
 .NOTES
   - Round-robin is achieved by maintaining multiple A/AAAA records with the same name.
-  - Small TTLs (30–60s) improve re-query behavior for better distribution.
+  - Small TTLs (30-60s) improve re-query behavior for better distribution.
   - Health probes here are *pre-creation checks*; ongoing health-based rotation needs a real LB or DNS policies.
 #>
 
@@ -86,11 +86,16 @@ begin {
   Install-ModuleIfMissing DnsServer -MinVersion '1.0.0.0'
 
   function Convert-Plan {
-    param([hashtable]$Overrides)
-    switch ($PSCmdlet.ParameterSetName) {
+    param(
+      [hashtable]$Overrides,
+      [string]$InputFormat,
+      [string]$CsvPath,
+      [string]$JsonPath
+    )
+    switch ($InputFormat) {
       'CSV'  {
-        if (-not (Test-Path $Csv)) { throw "CSV not found: $Csv" }
-        $rows = Import-Csv -Path $Csv
+        if (-not (Test-Path $CsvPath)) { throw "CSV not found: $CsvPath" }
+        $rows = Import-Csv -Path $CsvPath
         foreach ($r in $rows) {
           [pscustomobject]@{
             ZoneName        = $r.ZoneName
@@ -107,8 +112,8 @@ begin {
         }
       }
       'JSON' {
-        if (-not (Test-Path $Json)) { throw "JSON not found: $Json" }
-        $rows = Get-Content $Json -Raw | ConvertFrom-Json
+        if (-not (Test-Path $JsonPath)) { throw "JSON not found: $JsonPath" }
+        $rows = Get-Content $JsonPath -Raw | ConvertFrom-Json
         foreach ($r in $rows) {
           [pscustomobject]@{
             ZoneName        = $r.ZoneName
@@ -188,7 +193,7 @@ begin {
   }
 
   # Load and normalize the plan
-  $plan = Convert-Plan -Overrides $ovr
+  $plan = Convert-Plan -Overrides $ovr -InputFormat $PSCmdlet.ParameterSetName -CsvPath $Csv -JsonPath $Json
   if (-not $plan -or $plan.Count -eq 0) { throw "No records found in input." }
 
   # Validate zones exist up front

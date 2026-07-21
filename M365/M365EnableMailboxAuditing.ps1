@@ -1,45 +1,38 @@
-<# 
+<#
 .SYNOPSIS
-  Verify/enable mailbox auditing using ExchangeOnlineManagement v3+ (auditing is on by default).
-
-.EXAMPLE
-  .\O365EnableMailboxAuditing.ps1 -EnsureEnabled
+    Reports and optionally enables organization-wide mailbox auditing.
 #>
-[CmdletBinding()]
+
+#Requires -Modules ExchangeOnlineManagement
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-  [switch] $EnsureEnabled,     # set org auditing on if disabled
-  [switch] $ReportOnly,        # show current values only
-  [switch] $ForceDeviceCode
+    [string]$UserPrincipalName,
+
+    [switch]$UseDeviceAuthentication,
+
+    [switch]$EnsureEnabled
 )
-$ErrorActionPreference = 'Stop'
 
-function Install-ModuleIfMissing {
-  param([string]$Name,[string]$MinVersion='0.0.0')
-  if (-not (Get-Module -ListAvailable -Name $Name)) {
-    Install-Module $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
-  }
-  Import-Module $Name -MinimumVersion $MinVersion -ErrorAction Stop
+$connectParameters = @{ ShowBanner = $false }
+if ($UserPrincipalName) { $connectParameters.UserPrincipalName = $UserPrincipalName }
+if ($UseDeviceAuthentication) { $connectParameters.Device = $true }
+Connect-ExchangeOnline @connectParameters
+
+try {
+    $organization = Get-OrganizationConfig
+    if ($EnsureEnabled -and $organization.AuditDisabled -and
+        $PSCmdlet.ShouldProcess($organization.Name, 'Enable organization-wide mailbox auditing')) {
+        Set-OrganizationConfig -AuditDisabled:$false
+        $organization = Get-OrganizationConfig
+    }
+
+    [pscustomobject]@{
+        Organization    = $organization.Name
+        AuditDisabled   = $organization.AuditDisabled
+        DefaultAuditSet = $organization.DefaultAuditSet
+    }
 }
-
-Install-ModuleIfMissing ExchangeOnlineManagement -MinVersion '3.4.0'
-
-if ($ForceDeviceCode) {
-  Connect-ExchangeOnline -UseDeviceAuthentication | Out-Null
-} else {
-  Connect-ExchangeOnline | Out-Null
+finally {
+    Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 }
-
-$org = Get-OrganizationConfig
-Write-Host ("AuditDisabled: {0}" -f $org.AuditDisabled) -ForegroundColor Cyan
-Write-Host ("DefaultAuditSet (current build default): {0}" -f ($org.DefaultAuditSet -join ',')) -ForegroundColor Cyan
-
-if ($ReportOnly) { return }
-
-if ($EnsureEnabled -and $org.AuditDisabled) {
-  Write-Host "Enabling org-wide mailbox auditing..." -ForegroundColor Yellow
-  Set-OrganizationConfig -AuditDisabled:$false
-  $org = Get-OrganizationConfig
-  Write-Host ("AuditDisabled: {0}" -f $org.AuditDisabled) -ForegroundColor Green
-}
-
-Disconnect-ExchangeOnline -Confirm:$false | Out-Null

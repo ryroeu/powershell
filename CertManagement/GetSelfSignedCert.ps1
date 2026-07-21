@@ -1,17 +1,26 @@
+#Requires -Modules Microsoft.Graph.Authentication
+
 <#
 .SYNOPSIS
-    Retrieves self signed cert.
+    Imports a PFX certificate and uses it for Microsoft Graph application authentication.
 #>
 
-$define = @{
-    FilePath = 'C:\Git\PSautomateCert.pfx'
-    Password = (ConvertTo-SecureString -AsPlainText -String 'password' -Force)
-}
-$cert = Get-PfxCertificate @define
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$FilePath,
 
-$define = @{
-    ClientId = 'client-id-from-azure'
-    TenantId = 'tenant-id-from-azure'
-    Certificate = $cert
-}
-Connect-Graph @$define
+    [Parameter(Mandatory)]
+    [securestring]$Password,
+
+    [Parameter(Mandatory)]
+    [string]$ClientId,
+
+    [Parameter(Mandatory)]
+    [string]$TenantId
+)
+
+$certificate = Get-PfxCertificate -LiteralPath $FilePath -Password $Password -NoPromptForPassword
+
+Connect-MgGraph -ClientId $ClientId -TenantId $TenantId -Certificate $certificate -NoWelcome
+Get-MgContext

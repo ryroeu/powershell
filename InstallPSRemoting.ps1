@@ -37,7 +37,7 @@ Overwrites existing session configurations and plugin registrations if they exis
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
 param (
-    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [Parameter()]
     [string] $PowerShellHome,
 
     [Parameter()]

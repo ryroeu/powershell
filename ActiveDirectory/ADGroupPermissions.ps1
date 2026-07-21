@@ -1,34 +1,61 @@
 <#
 .SYNOPSIS
-    Manages active directory group permissions.
+    Reports explicit permissions on Active Directory groups and file-system paths.
 #>
 
-# VIEW ACCESS RIGHTS ON GROUP OBJECT
-$GroupName = Get-Content .\GroupNames.txt
-(Get-ACL (Get-ADGroup $GroupName)).Access | Select-Object IdentityReference, `
-                                                          ActiveDirectoryRights, `
-                                                          AccessControlType, `
-                                                          IsInherited, `
-                                                          InheritanceType, `
-                                                          InheritanceFlags, `
-                                                          PropagationFlags, `
-                                                          ObjectFlags, `
-                                                          ObjectType, `
-                                                          InheritedObjectType `
-                                          | Export-Csv .\GroupAccess.csv -NoTypeInformation
+#Requires -Modules ActiveDirectory
 
+[CmdletBinding()]
+param(
+    [string[]]$GroupIdentity,
 
+    [string[]]$Path,
 
-# VIEW PERMISSIONS OF NON-INHERITED USERS ON SPECIFIC ORGANIZATIONAL UNIT (OU)
-$Path = Get-Content .\Paths.txt
-(Get-ACL $Path).Access | Where-Object {$_.IsInherited -eq $FALSE} | Select-Object IdentityReference, `
-                                                                                  ActiveDirectoryRights, `
-                                                                                  AccessControlType, `
-                                                                                  IsInherited, `
-                                                                                  InheritanceType, `
-                                                                                  InheritanceFlags, `
-                                                                                  PropagationFlags, `
-                                                                                  ObjectFlags, `
-                                                                                  ObjectType, `
-                                                                                  InheritedObjectType `
-                                                                  | Export-Csv .\GroupPermissions.csv -NoTypeInformation
+    [string]$OutputPath
+)
+
+if (-not $GroupIdentity -and -not $Path) {
+    throw 'Specify at least one -GroupIdentity or -Path value.'
+}
+
+$results = @(
+    foreach ($group in $GroupIdentity) {
+        $adGroup = Get-ADGroup -Identity $group -ErrorAction Stop
+        $acl = Get-Acl -LiteralPath "AD:$($adGroup.DistinguishedName)"
+        foreach ($access in $acl.Access) {
+            [pscustomobject]@{
+                TargetType             = 'ActiveDirectoryGroup'
+                Target                 = $adGroup.DistinguishedName
+                IdentityReference      = $access.IdentityReference
+                Rights                 = $access.ActiveDirectoryRights
+                AccessControlType      = $access.AccessControlType
+                IsInherited            = $access.IsInherited
+                InheritanceType        = $access.InheritanceType
+                ObjectType             = $access.ObjectType
+                InheritedObjectType    = $access.InheritedObjectType
+            }
+        }
+    }
+
+    foreach ($itemPath in $Path) {
+        $resolvedPath = (Resolve-Path -LiteralPath $itemPath -ErrorAction Stop).Path
+        foreach ($access in (Get-Acl -LiteralPath $resolvedPath).Access | Where-Object IsInherited -eq $false) {
+            [pscustomobject]@{
+                TargetType             = 'FileSystemPath'
+                Target                 = $resolvedPath
+                IdentityReference      = $access.IdentityReference
+                Rights                 = $access.FileSystemRights
+                AccessControlType      = $access.AccessControlType
+                IsInherited            = $access.IsInherited
+                InheritanceType        = $access.InheritanceFlags
+                ObjectType             = $null
+                InheritedObjectType    = $null
+            }
+        }
+    }
+)
+
+if ($OutputPath) {
+    $results | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8NoBOM
+}
+$results

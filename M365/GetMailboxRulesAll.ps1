@@ -1,49 +1,50 @@
 <#
 .SYNOPSIS
-    Retrieves mailbox rules all.
+    Retrieves inbox-rule change audit events from multiple Microsoft 365 organizations.
 #>
 
-$TenantID = 'YourTenantID'
-$AppID = 'YourApplicationID'
-$CertThumbprint = 'YourCertThumbprint'  # App must have Exchange.ManageAsApp permission
-##############################
+#Requires -Modules ExchangeOnlineManagement
 
-# Connect to Partner Center to get all customer tenants
-Import-Module PartnerCenter
-Connect-PartnerCenter -ApplicationId $AppID -TenantId $TenantID
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string[]]$Organization,
 
-$customers = Get-PartnerCustomer
+    [Parameter(Mandatory)]
+    [string]$AppId,
 
-$logs = foreach ($customer in $customers) {
-    $startDate = (Get-Date).AddDays(-1)
-    $endDate   = (Get-Date)
+    [Parameter(Mandatory)]
+    [string]$CertificateThumbprint,
 
-    # Connect to each customer tenant via delegated Exchange Online management
-    Connect-ExchangeOnline -AppId $AppID -CertificateThumbprint $CertThumbprint `
-        -Organization $customer.Domain -ShowBanner:$false
+    [datetime]$StartDate = (Get-Date).AddDays(-1),
 
-    if ((Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled -eq $false) {
-        Write-Host "AuditLog is disabled for client $($customer.Name)"
+    [datetime]$EndDate = (Get-Date)
+)
+
+if ($StartDate -ge $EndDate) { throw '-StartDate must be earlier than -EndDate.' }
+
+foreach ($tenant in $Organization | Sort-Object -Unique) {
+    Connect-ExchangeOnline -AppId $AppId -CertificateThumbprint $CertificateThumbprint -Organization $tenant -ShowBanner:$false
+    try {
+        $sessionId = [guid]::NewGuid().ToString()
+        do {
+            $page = @(Search-UnifiedAuditLog -SessionCommand ReturnLargeSet -SessionId $sessionId -ResultSize 5000 `
+                    -StartDate $StartDate -EndDate $EndDate -Operations 'New-InboxRule', 'Set-InboxRule', 'UpdateInboxRules')
+            foreach ($auditEvent in $page) {
+                $auditData = $auditEvent.AuditData | ConvertFrom-Json
+                [pscustomobject]@{
+                    Organization = $tenant
+                    CreationDate = $auditEvent.CreationDate
+                    UserId       = $auditEvent.UserIds
+                    Operation    = $auditEvent.Operations
+                    ResultStatus = $auditEvent.ResultStatus
+                    Parameters   = $auditData.Parameters
+                    AuditData    = $auditData
+                }
+            }
+        } while ($page.Count -eq 5000)
     }
-
-    $logsTenant = @()
-    Write-Host "Retrieving logs for $($customer.Name)" -ForegroundColor Blue
-    do {
-        $logsTenant += Search-UnifiedAuditLog -SessionCommand ReturnLargeSet -SessionId $customer.Name `
-            -ResultSize 5000 -StartDate $startDate -EndDate $endDate `
-            -Operations "New-InboxRule", "Set-InboxRule", "UpdateInboxRules"
-        Write-Host "Retrieved $($logsTenant.Count) logs" -ForegroundColor Yellow
-    } while ($logsTenant.Count % 5000 -eq 0 -and $logsTenant.Count -ne 0)
-
-    Write-Host "Finished retrieving logs" -ForegroundColor Green
-    Disconnect-ExchangeOnline -Confirm:$false
-    $logsTenant
-}
-
-foreach ($log in $logs) {
-    $auditData = $log.AuditData | ConvertFrom-Json
-    Write-Host "A new or changed rule has been found for user $($log.UserIds). The rule has the following info: $($auditData.Parameters | Out-String)`n"
-}
-if (!$logs) {
-    Write-Host "Healthy."
+    finally {
+        Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    }
 }

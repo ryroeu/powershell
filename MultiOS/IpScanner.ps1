@@ -77,7 +77,7 @@ function Find-Network {
             }
         }
         catch {
-            # Catch any errors from Test-Connection and ignore them.
+            Write-Verbose "Ping to '$ip' failed: $($_.Exception.Message)"
         }
     }
 

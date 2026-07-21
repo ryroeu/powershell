@@ -1,40 +1,63 @@
 <#
 .SYNOPSIS
-    Sets disk space alarm.
+    Sends an SMTP alert for Windows fixed volumes below configured free-space thresholds.
 #>
 
-﻿# Replace "smtp.domain.com" with your mail server name
-Add-Type -AssemblyName System.Net.Mail
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+param(
+    [Parameter(Mandatory)]
+    [string]$SmtpServer,
 
-$smtp = New-Object System.Net.Mail.SmtpClient("smtp.domain.com")
+    [ValidateRange(1, 65535)]
+    [int]$SmtpPort = 587,
 
-# Set thresholds (in gigabytes) for C: drive and for the remaining drives
-$driveCthreshold = 10
-$threshold = 60
+    [Parameter(Mandatory)]
+    [mailaddress]$From,
 
-# Replace settings below with your e-mails
-$emailFrom = "DBServer@domain.com"
-$emailTo = "email2@domain.com"
+    [Parameter(Mandatory)]
+    [mailaddress[]]$To,
 
-# Get SQL Server hostname
-$hostname = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Name
+    [pscredential]$Credential,
 
-# Get all drives with free space less than a threshold. Exclude System Volumes
-$Results = Get-CimInstance -ClassName Win32_Volume -Filter "SystemVolume='False' AND DriveType=3" | Where-Object {`
-	($_.FreeSpace/1GB -lt  $driveCthreshold -and $_.DriveLetter -eq "C:") -or ($_.FreeSpace/1GB -lt  $threshold -and $_.DriveLetter -ne "C:" )
-}
+    [switch]$UseSsl,
 
-ForEach ($Result In $Results){
-	$drive = $Result.DriveLetter
-	$space = $Result.FreeSpace
-	$thresh = if($drive -eq 'C:'){$driveCthreshold} else {$threshold}
+    [ValidateRange(0, [double]::MaxValue)]
+    [double]$SystemDriveThresholdGB = 10,
 
-	# Send e-mail if the free space is less than threshold parameter
-	$smtp.Send(
-	$emailFrom,
-	$emailTo,
-	# E-mail subject
-	"Disk $drive on $hostname has less than $thresh GB of free space left ",
-	# E-mail body
-	("{0:N0}" -f [math]::truncate($space/1MB))+" MB")
+    [ValidateRange(0, [double]::MaxValue)]
+    [double]$OtherDriveThresholdGB = 60
+)
+
+$computerName = $env:COMPUTERNAME
+$systemDrive = $env:SystemDrive
+$volumes = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3'
+
+foreach ($volume in $volumes) {
+    $threshold = if ($volume.DeviceID -eq $systemDrive) { $SystemDriveThresholdGB } else { $OtherDriveThresholdGB }
+    $freeGB = [math]::Round($volume.FreeSpace / 1GB, 2)
+    if ($freeGB -ge $threshold) {
+        continue
+    }
+
+    $subject = "Low disk space on $computerName $($volume.DeviceID)"
+    $body = 'Drive {0} on {1} has {2:N2} GB free; threshold is {3:N2} GB.' -f $volume.DeviceID, $computerName, $freeGB, $threshold
+    if (-not $PSCmdlet.ShouldProcess(($To -join ', '), "Send alert '$subject'")) {
+        continue
+    }
+
+    $message = [Net.Mail.MailMessage]::new()
+    $client = [Net.Mail.SmtpClient]::new($SmtpServer, $SmtpPort)
+    try {
+        $message.From = $From
+        foreach ($address in $To) { $message.To.Add($address) }
+        $message.Subject = $subject
+        $message.Body = $body
+        $client.EnableSsl = $UseSsl
+        if ($Credential) { $client.Credentials = $Credential.GetNetworkCredential() }
+        $client.Send($message)
+    }
+    finally {
+        $message.Dispose()
+        $client.Dispose()
+    }
 }

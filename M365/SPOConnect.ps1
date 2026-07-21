@@ -14,9 +14,6 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'Credential')]
     [System.Management.Automation.PSCredential]$Credential,
 
-    [Parameter(ParameterSetName = 'Browser')]
-    [switch]$UseSystemBrowser,
-
     [Parameter(Mandatory, ParameterSetName = 'Certificate')]
     [ValidateNotNullOrEmpty()]
     [string]$ClientId,

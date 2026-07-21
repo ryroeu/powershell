@@ -1,6 +1,14 @@
 <#
 .SYNOPSIS
-    Finds process over 20 mb.
+    Returns processes whose working set exceeds a threshold.
 #>
 
-Get-Process | Where-Object {$_.WorkingSet -gt 20000000}
+[CmdletBinding()]
+param(
+    [ValidateRange(0, [double]::MaxValue)]
+    [double]$MinimumMegabytes = 20
+)
+
+Get-Process |
+    Where-Object WorkingSet64 -gt ($MinimumMegabytes * 1MB) |
+    Select-Object Name, Id, @{Name = 'WorkingSetMB'; Expression = { [math]::Round($_.WorkingSet64 / 1MB, 2) } }

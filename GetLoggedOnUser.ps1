@@ -1,16 +1,25 @@
 <#
 .SYNOPSIS
-    Retrieves logged on user.
+    Retrieves Terminal Services sessions from a Windows computer.
 #>
 
-# Get LoggedOn User
-# Define the server name
-$Server = "YourRemoteServerName" # Replace with the actual server name or IP
+[CmdletBinding()]
+param(
+    [string]$ComputerName = $env:COMPUTERNAME,
 
+    [pscredential]$Credential
+)
+
+$sessionParameters = @{ ComputerName = $ComputerName }
+if ($Credential) {
+    $sessionParameters.Credential = $Credential
+}
+
+$session = New-CimSession @sessionParameters
 try {
-    # Query the Terminal Services sessions
-    Get-CimInstance -ComputerName $Server -Namespace root\CIMV2\TerminalServices -ClassName Win32_TSSession | Select-Object -Property UserName, SessionId, State, ClientName, SessionType, ConnectTime, DisconnectTime, LogonTime
-} catch {
-    Write-Error "Failed to query sessions on $Server. Error: $($_.Exception.Message)"
-    # Common issues include: WinRM not enabled/configured, firewall blocking, insufficient permissions, server offline.
+    Get-CimInstance -CimSession $session -Namespace 'root/CIMV2/TerminalServices' -ClassName Win32_TSSession |
+        Select-Object UserName, SessionId, State, ClientName, SessionType, ConnectTime, DisconnectTime, LogonTime
+}
+finally {
+    Remove-CimSession -CimSession $session
 }

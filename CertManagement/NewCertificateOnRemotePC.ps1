@@ -49,12 +49,10 @@ function New-RemoteRDPCertificate {
             return
         }
 
-        $result = Invoke-Command -Session $PSSession -HideComputerName -ArgumentList $ValidUntil, $HashAlgorithm, $KeyLength -ScriptBlock {
-            param(
-                [datetime]$using:using:ValidUntil,
-                [string]$using:using:Algorithm,
-                [int]$using:using:KeyLength
-            )
+        $result = Invoke-Command -Session $PSSession -HideComputerName -ScriptBlock {
+            $remoteValidUntil = $using:ValidUntil
+            $remoteAlgorithm = $using:HashAlgorithm
+            $remoteKeyLength = $using:KeyLength
 
             Add-Type -AssemblyName System.Security
 
@@ -88,7 +86,7 @@ function New-RemoteRDPCertificate {
             $key.ProviderName = 'Microsoft RSA SChannel Cryptographic Provider'
             $key.Algorithm = $algorithmId
             $key.KeySpec = 1
-            $key.Length = $KeyLength
+            $key.Length = $remoteKeyLength
             $key.SecurityDescriptor = 'D:PAI(A;;0xd01f01ff;;;SY)(A;;0xd01f01ff;;;BA)(A;;0x80120089;;;NS)'
             $key.MachineContext = 1
             $key.ExportPolicy = 0
@@ -102,14 +100,14 @@ function New-RemoteRDPCertificate {
             $request.Subject = $subject
             $request.Issuer = $request.Subject
             $request.NotBefore = Get-Date
-            $request.NotAfter = $ValidUntil
+            $request.NotAfter = $remoteValidUntil
 
             foreach ($extension in $extensions) {
                 $request.X509Extensions.Add($extension)
             }
 
             $signatureId = New-Object -ComObject 'X509Enrollment.CObjectId.1'
-            $hashAlgorithm = [System.Security.Cryptography.Oid]::FromFriendlyName($Algorithm, [System.Security.Cryptography.OidGroup]::HashAlgorithm)
+            $hashAlgorithm = [System.Security.Cryptography.Oid]::FromFriendlyName($remoteAlgorithm, [System.Security.Cryptography.OidGroup]::HashAlgorithm)
             $signatureId.InitializeFromValue($hashAlgorithm.Value)
             $request.SignatureInformation.HashAlgorithm = $signatureId
             $request.Encode()

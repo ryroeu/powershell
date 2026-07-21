@@ -1,21 +1,24 @@
 <#
 .SYNOPSIS
-    Stops service.
+    Stops a Windows service and waits for it to reach the Stopped state.
 #>
 
-$ServiceName = 'Name of Service'
-$arrService = Get-Service -Name $ServiceName
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Name,
 
-while ($arrService.Status -eq 'Running') {
-    Stop-Service $ServiceName
-    Write-Host $arrService.status
-    Write-Host 'Service stopping'
-    Start-Sleep -Seconds 60
-    $arrService.Refresh()
-    if ($arrService.Status -ne 'Running') {
-        Write-Host 'Service is now Stopped'
-    }
-    else {
-        Write-Host "Service could not be Stopped"
-    }
+    [ValidateRange(1, 3600)]
+    [int]$TimeoutSeconds = 60,
+
+    [switch]$Force
+)
+
+$service = Get-Service -Name $Name -ErrorAction Stop
+if ($service.Status -ne 'Stopped' -and $PSCmdlet.ShouldProcess($service.Name, 'Stop service')) {
+    Stop-Service -InputObject $service -Force:$Force -ErrorAction Stop
+    $service.WaitForStatus('Stopped', [timespan]::FromSeconds($TimeoutSeconds))
+    $service.Refresh()
 }
+
+$service

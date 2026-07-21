@@ -1,4 +1,5 @@
-#Requires -Version 3.0
+#Requires -Version 7.6
+#Requires -Modules Microsoft.PowerShell.ThreadJob
 
 <#
 .SYNOPSIS
@@ -74,9 +75,10 @@ function Get-Port {
                     $clientIP = $client.Client.RemoteEndPoint.ToString()
                     Write-Verbose "Client connected from $clientIP"
 
-                    # Start a background job to handle this client
-                    $job = Start-Job -Name "ClientHandler_$clientIP" -ScriptBlock {
-                        param($clientInstance, $clientIPAddr)
+                    # A thread job is required because a process job serializes TcpClient and loses its live socket.
+                    $job = Start-ThreadJob -Name "ClientHandler_$clientIP" -ScriptBlock {
+                        $clientInstance = $using:client
+                        $clientIPAddr = $using:clientIP
 
                         # Set basic timeouts (in milliseconds)
                         $clientInstance.SendTimeout = 5000
@@ -139,7 +141,7 @@ function Get-Port {
                             if ($null -ne $clientInstance) { $clientInstance.Dispose() }
                             Write-Host "($clientIPAddr): Client disconnected and resources cleaned up." -ForegroundColor Gray
                         }
-                    } -ArgumentList $client, $clientIP
+                    }
 
                     $jobs.Add($job) # Add the new job to our tracking list
                     Write-Verbose "Started job $($job.Id) to handle client $clientIP"

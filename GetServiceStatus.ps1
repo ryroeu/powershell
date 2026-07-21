@@ -1,13 +1,21 @@
 <#
 .SYNOPSIS
-    Retrieves service status.
+    Retrieves service status information.
 #>
 
-$svc = Get-Service W32Time
-$svcName = $svc.Name
-switch -wildcard ($svc.Status) {
-    "S*" {Write-Host "The $svcName service is stopped."}
-    "R*" {Write-Host "The $svcName service is running."}
-    "P*" {Write-Host "The $svcName service is paused."}
-    default {Write-Host "Check the service."}
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+    [Alias('ServiceName')]
+    [string[]]$Name,
+
+    [string]$ComputerName
+)
+
+process {
+    $parameters = @{ Name = $Name }
+    if ($ComputerName) {
+        $parameters.ComputerName = $ComputerName
+    }
+    Get-Service @parameters | Select-Object Name, DisplayName, Status, StartType, MachineName
 }

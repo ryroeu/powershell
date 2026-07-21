@@ -1,11 +1,24 @@
 <#
 .SYNOPSIS
-    Retrieves FSMO roles.
+    Retrieves forest-wide and domain-wide FSMO role holders.
 #>
 
-### Get FSMO Roles ###
-Get-ADForest domain.com | Format-Table SchemaMaster
-Get-ADForest domain.com | Format-Table DomainNamingMaster
-Get-ADForest domain.com | Format-Table PDCEmulator
-Get-ADForest domain.com | Format-Table InfrastructureMaster
-Get-ADForest domain.com | Format-Table RIDMaster
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$Forest,
+
+    [string]$Domain
+)
+
+$forestObject = if ($Forest) { Get-ADForest -Identity $Forest } else { Get-ADForest }
+$domainObject = if ($Domain) { Get-ADDomain -Identity $Domain } else { Get-ADDomain }
+
+[pscustomobject]@{
+    SchemaMaster         = $forestObject.SchemaMaster
+    DomainNamingMaster   = $forestObject.DomainNamingMaster
+    PDCEmulator          = $domainObject.PDCEmulator
+    RIDMaster            = $domainObject.RIDMaster
+    InfrastructureMaster = $domainObject.InfrastructureMaster
+}

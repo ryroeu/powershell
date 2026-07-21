@@ -1,21 +1,41 @@
 <#
 .SYNOPSIS
-    Manages active directory group membership.
+    Exports membership for selected Active Directory groups or all groups.
 #>
 
-### Export Domain Admins Group to CSV ###
-Get-ADGroupMember -Server domain.com `
-                  -Identity "Domain Admins" `
-                  -Recursive | Export-Csv -Path C:\ExportDir\DomainAdmins.csv
+#Requires -Modules ActiveDirectory
 
-### Export Local Admins Group to CSV ###
-Get-ADGroupMember -Server domain.com `
-                  -Identity "Local Admin Users" `
-                  -Recursive | Export-Csv -Path C:\ExportDir\LocalAdmins.csv
+[CmdletBinding(DefaultParameterSetName = 'Selected')]
+param(
+    [Parameter(Mandatory, ParameterSetName = 'Selected')]
+    [string[]]$Group,
 
-### Export All Groups and their Membership to CSV ###
-Get-ADGroup -Server domain.com `
-            -Filter * `
-            -Properties * `
-            | Select-Object -Property Name, GroupCategory, GroupScope, DistinguishedName, Description, ManagedBy, @{Name="Members";Expression={($_ | Get-ADGroupMember | Select-Object -ExpandProperty Name) -join ";"}} `
-            | Export-Csv -Path C:\ExportDir\AllGroups.csv
+    [Parameter(Mandatory, ParameterSetName = 'All')]
+    [switch]$AllGroups,
+
+    [string]$Server,
+
+    [string]$OutputPath
+)
+
+$adParameters = @{}
+if ($Server) { $adParameters.Server = $Server }
+$groups = if ($AllGroups) { Get-ADGroup -Filter * @adParameters } else { $Group | ForEach-Object { Get-ADGroup -Identity $_ @adParameters } }
+
+$rows = foreach ($adGroup in $groups) {
+    $members = @(Get-ADGroupMember -Identity $adGroup -Recursive @adParameters)
+    if ($members.Count -eq 0) {
+        [pscustomobject]@{ GroupName = $adGroup.Name; MemberName = $null; SamAccountName = $null; ObjectClass = $null; DistinguishedName = $null }
+    }
+    foreach ($member in $members) {
+        [pscustomobject]@{
+            GroupName         = $adGroup.Name
+            MemberName        = $member.Name
+            SamAccountName    = $member.SamAccountName
+            ObjectClass       = $member.ObjectClass
+            DistinguishedName = $member.DistinguishedName
+        }
+    }
+}
+if ($OutputPath) { $rows | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
+$rows

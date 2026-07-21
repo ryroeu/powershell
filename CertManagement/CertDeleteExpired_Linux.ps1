@@ -32,7 +32,7 @@ WARNING: Deleting certificate files can break applications relying on them. Veri
 #>
 [CmdletBinding(SupportsShouldProcess = $true)] # Enables -WhatIf, -Confirm
 param(
-    [Parameter(Mandatory = $false, ValueFromPipeline = $false)]
+    [Parameter(Mandatory = $false)]
     [string[]]$SearchPath = @("/etc/ssl/certs/"), # CAUTION with default - consider changing to safer app/user paths
 
     [Parameter(Mandatory = $false)]

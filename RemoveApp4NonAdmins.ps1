@@ -1,22 +1,29 @@
 <#
 .SYNOPSIS
-    Removes application 4 non admins.
+    Removes an AppX package from local users who are not administrators.
 #>
 
-# Get local users
-$Users = Get-LocalUser | Select-Object Name
-# Get members of administrators group
-$Admins = Get-LocalGroupMember -Name Administrators | Select-Object Name
-# Set the AppXPackage Name
-$App = "Name of AppXPackage"
-# Check to see if this user is an administrator and act accordingly
-foreach ($User in $Users) {
-    if ($Admins -Contains $User) {
-        Write-Host "$User is NOT a local administrator" -ForegroundColor Green
-        # Remove the app
-        Get-AppXPackage -User $User -Name $App | Remove-AppxPackage
-    } 
-    else {
-        Write-Host "$User is a local administrator" -ForegroundColor Red
+#Requires -RunAsAdministrator
+
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [string]$Name
+)
+
+$administratorNames = @(Get-LocalGroupMember -SID 'S-1-5-32-544' -ErrorAction Stop |
+    ForEach-Object { ($_.Name -split '\\')[-1] })
+
+foreach ($user in Get-LocalUser | Where-Object Enabled) {
+    if ($user.Name -in $administratorNames) {
+        Write-Verbose "Skipping administrator '$($user.Name)'."
+        continue
+    }
+
+    $packages = @(Get-AppxPackage -User $user.Name -Name $Name -ErrorAction SilentlyContinue)
+    foreach ($package in $packages) {
+        if ($PSCmdlet.ShouldProcess("$($user.Name): $($package.Name)", 'Remove AppX package')) {
+            Remove-AppxPackage -Package $package.PackageFullName -User $user.SID -ErrorAction Stop
+        }
     }
 }

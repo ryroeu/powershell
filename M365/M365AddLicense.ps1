@@ -36,8 +36,6 @@ if ($ForceDeviceCode) {
 } else {
   Connect-MgGraph -Scopes $scopes -NoWelcome | Out-Null
 }
-Select-MgProfile -Name beta
-
 # Resolve SKU
 $sku = Get-MgSubscribedSku -All | Where-Object SkuPartNumber -eq $SkuPartNumber
 if (-not $sku) { throw "SkuPartNumber '$SkuPartNumber' not found in your tenant." }

@@ -1,89 +1,103 @@
-#Requires -Modules Microsoft.Graph.Mail
+#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users.Actions
 
 <#
 .SYNOPSIS
-    Sends email Microsoft 365.
+    Sends email through Microsoft Graph using delegated or application authentication.
 #>
 
-# --- Configuration (Replace with your actual values) ---
-$TenantId = "YOUR_TENANT_ID"
-$AppId = "YOUR_APP_REGISTRATION_CLIENT_ID"
-$AppSecret = "YOUR_APP_REGISTRATION_CLIENT_SECRET" # Or use Certificate Thumbprint
-$SenderUserPrincipalName = "user.who.can.send@yourdomain.com" # User whose mailbox will send
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium', DefaultParameterSetName = 'Interactive')]
+param(
+    [Parameter(Mandatory)]
+    [string]$TenantId,
 
-$ToRecipient = @{
-    emailAddress = @{
-        address = "recipient@domain.com"
-    }
-}
-# Multiple recipients: $ToRecipientArray = @( @{emailAddress=@{address="r1@d.com"}}, @{emailAddress=@{address="r2@d.com"}} )
+    [Parameter(Mandatory, ParameterSetName = 'ClientSecret')]
+    [Parameter(Mandatory, ParameterSetName = 'Certificate')]
+    [string]$ClientId,
 
-$CcRecipient = @{
-    emailAddress = @{
-        address = "cc-user@domain.com"
-    }
-}
-# Multiple CCs: $CcRecipientArray = @( @{emailAddress=@{address="cc1@d.com"}} )
+    [Parameter(Mandatory, ParameterSetName = 'ClientSecret')]
+    [securestring]$ClientSecret,
 
+    [Parameter(Mandatory, ParameterSetName = 'Certificate')]
+    [string]$CertificateThumbprint,
 
-$Subject = "File Request (Sent via Graph)"
-$BodyContent = @"
-<h2>Here is the file you requested</h2>
-<br><br>
-Name of file: File.jpg
-"@
-$Body = @{
-    contentType = "HTML" # Or "Text"
-    content = $BodyContent
-}
+    [Parameter(Mandatory)]
+    [string]$SenderUserPrincipalName,
 
-# --- Optional: Attachment ---
-$AttachmentPath = "C:\Temp\File.jpg"
-$AttachmentBytes = [System.IO.File]::ReadAllBytes($AttachmentPath)
-$AttachmentBase64 = [System.Convert]::ToBase64String($AttachmentBytes)
-$AttachmentFileName = [System.IO.Path]::GetFileName($AttachmentPath)
+    [Parameter(Mandatory)]
+    [mailaddress[]]$To,
 
-$Attachments = @(
-    @{
-        "@odata.type" = "#microsoft.graph.fileAttachment"
-        name = $AttachmentFileName
-        contentType = "image/jpeg" # Adjust MIME type as needed (e.g., application/pdf)
-        contentBytes = $AttachmentBase64
-    }
+    [mailaddress[]]$Cc,
+
+    [Parameter(Mandatory)]
+    [string]$Subject,
+
+    [Parameter(Mandatory)]
+    [AllowEmptyString()]
+    [string]$Body,
+
+    [ValidateSet('Text', 'HTML')]
+    [string]$BodyType = 'HTML',
+
+    [string[]]$AttachmentPath,
+
+    [bool]$SaveToSentItems = $true,
+
+    [switch]$UseDeviceCode
 )
 
-# --- Connect to Microsoft Graph (using Application permissions) ---
-# NOTE: Secret should be handled securely (e.g., Azure Key Vault, Windows Credential Manager)
-$SecureAppSecret = ConvertTo-SecureString $AppSecret -AsPlainText -Force
-$Credential = New-Object System.Management.Automation.PSCredential ($AppId, $SecureAppSecret)
-
-try {
-    Write-Host "Connecting to Microsoft Graph..."
-    # Ensure required scope is requested if not already consented in App Registration
-    Connect-MgGraph -TenantId $TenantId -AppId $AppId -Credential $Credential
-    Write-Host "Connected successfully."
-
-    # --- Send Email ---
-    Write-Host "Attempting to send email from $SenderUserPrincipalName..."
-    Send-MgUserMail -UserId $SenderUserPrincipalName `
-                    -Message @{
-                        subject = $Subject
-                        body = $Body
-                        toRecipients = @($ToRecipient) # Ensure it's an array
-                        ccRecipients = @($CcRecipient) # Ensure it's an array
-                        attachments = $Attachments # Add this line for attachments
-                    } `
-                    -SaveToSentItems $true # Or $false
-
-    Write-Host "Email command sent successfully via Microsoft Graph."
-
+$connectParameters = @{ TenantId = $TenantId; NoWelcome = $true }
+switch ($PSCmdlet.ParameterSetName) {
+    'ClientSecret' {
+        $connectParameters.ClientSecretCredential = [pscredential]::new($ClientId, $ClientSecret)
+    }
+    'Certificate' {
+        $connectParameters.ClientId = $ClientId
+        $connectParameters.CertificateThumbprint = $CertificateThumbprint
+    }
+    default {
+        $connectParameters.Scopes = 'Mail.Send'
+        $connectParameters.UseDeviceCode = $UseDeviceCode
+    }
 }
-catch {
-    Write-Error "Failed to send email via Graph: $($_.Exception.Message)"
-    Write-Error "Status Code: $($_.Exception.Response.StatusCode)"
-    Write-Error "Response: $($_.Exception.Response.Content)"
+
+$toRecipients = @($To | ForEach-Object { @{ EmailAddress = @{ Address = $_.Address } } })
+$ccRecipients = @($Cc | ForEach-Object { @{ EmailAddress = @{ Address = $_.Address } } })
+$attachments = @($AttachmentPath | ForEach-Object {
+    $file = Get-Item -LiteralPath $_ -ErrorAction Stop
+    $contentType = switch ($file.Extension.ToLowerInvariant()) {
+        '.csv' { 'text/csv' }
+        '.html' { 'text/html' }
+        '.jpg' { 'image/jpeg' }
+        '.jpeg' { 'image/jpeg' }
+        '.png' { 'image/png' }
+        '.pdf' { 'application/pdf' }
+        '.txt' { 'text/plain' }
+        '.xlsx' { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+        '.zip' { 'application/zip' }
+        default { 'application/octet-stream' }
+    }
+    @{
+        '@odata.type' = '#microsoft.graph.fileAttachment'
+        Name          = $file.Name
+        ContentType   = $contentType
+        ContentBytes  = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file.FullName))
+    }
+})
+
+Connect-MgGraph @connectParameters | Out-Null
+try {
+    if ($PSCmdlet.ShouldProcess(($To.Address -join ', '), "Send Microsoft 365 email '$Subject'")) {
+        $message = @{
+            Subject      = $Subject
+            Body         = @{ ContentType = $BodyType; Content = $Body }
+            ToRecipients = $toRecipients
+        }
+        if ($ccRecipients.Count -gt 0) { $message.CcRecipients = $ccRecipients }
+        if ($attachments.Count -gt 0) { $message.Attachments = $attachments }
+
+        Send-MgUserMail -UserId $SenderUserPrincipalName -Message $message -SaveToSentItems:$SaveToSentItems
+    }
 }
 finally {
-    # Disconnect if needed, especially in longer scripts
-    Disconnect-MgGraph
+    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
 }

@@ -1,44 +1,45 @@
-﻿<#
+<#
 .SYNOPSIS
-  Connect to Microsoft Purview (Compliance/Security) PowerShell and EXO modern endpoints.
-
-.EXAMPLE
-  .\O365SCCConnect.ps1 -Compliance -EXO
+    Connects to Microsoft Purview compliance PowerShell and/or Exchange Online.
 #>
+
+#Requires -Modules ExchangeOnlineManagement
+
 [CmdletBinding()]
 param(
-  [switch] $Compliance,
-  [switch] $EXO,
-  [switch] $SearchOnly,      # for eDiscovery-only sessions
-  [switch] $ForceDeviceCode
+    [switch]$Compliance,
+
+    [switch]$ExchangeOnline,
+
+    [switch]$SearchOnly,
+
+    [switch]$UseDeviceAuthentication,
+
+    [string]$UserPrincipalName
 )
-$ErrorActionPreference = 'Stop'
 
-function Install-ModuleIfNeeded {
-  param([string]$Name,[string]$MinVersion='0.0.0')
-  if (-not (Get-Module -ListAvailable -Name $Name)) {
-    Install-Module -Name $Name -MinimumVersion $MinVersion -Scope CurrentUser -Force -AllowClobber
-  }
-  Import-Module -Name $Name -MinimumVersion $MinVersion -ErrorAction Stop
+if (-not ($Compliance -or $ExchangeOnline)) {
+    throw 'Specify -Compliance, -ExchangeOnline, or both.'
 }
-
-Install-ModuleIfNeeded ExchangeOnlineManagement -MinVersion '3.4.0'
+if ($SearchOnly -and -not $Compliance) {
+    throw '-SearchOnly requires -Compliance.'
+}
 
 if ($Compliance) {
-  if ($ForceDeviceCode) {
-    Connect-IPPSSession -UseDeviceAuthentication -EnableSearchOnlySession:$SearchOnly | Out-Null
-  } else {
-    Connect-IPPSSession -EnableSearchOnlySession:$SearchOnly | Out-Null
-  }
-  Write-Host "Connected to Purview (Compliance & Security)." -ForegroundColor Green
+    $parameters = @{ EnableSearchOnlySession = $SearchOnly }
+    if ($UserPrincipalName) { $parameters.UserPrincipalName = $UserPrincipalName }
+    if ($UseDeviceAuthentication) { $parameters.Device = $true }
+    Connect-IPPSSession @parameters | Out-Null
+}
+if ($ExchangeOnline) {
+    $parameters = @{ ShowBanner = $false }
+    if ($UserPrincipalName) { $parameters.UserPrincipalName = $UserPrincipalName }
+    if ($UseDeviceAuthentication) { $parameters.Device = $true }
+    Connect-ExchangeOnline @parameters | Out-Null
 }
 
-if ($EXO) {
-  if ($ForceDeviceCode) {
-    Connect-ExchangeOnline -UseDeviceAuthentication | Out-Null
-  } else {
-    Connect-ExchangeOnline | Out-Null
-  }
-  Write-Host "Connected to Exchange Online." -ForegroundColor Green
+[pscustomobject]@{
+    ComplianceConnected     = $Compliance.IsPresent
+    ExchangeOnlineConnected = $ExchangeOnline.IsPresent
+    SearchOnly              = $SearchOnly.IsPresent
 }
-Write-Host "Done." -ForegroundColor Green

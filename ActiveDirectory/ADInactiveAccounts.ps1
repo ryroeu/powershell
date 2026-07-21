@@ -1,16 +1,22 @@
 <#
 .SYNOPSIS
-    Manages active directory inactive accounts.
+    Retrieves Active Directory users inactive for a specified period.
 #>
 
-### SEARCH 90 DAY INACTIVE ACCOUNTS BY USERS ONLY ###
-Search-ADAccount -UsersOnly `
-                 -AccountInactive `
-                 -TimeSpan 90.00:00:00 | Export-Csv C:\ExportDir\InactiveAccounts.csv -NoTypeInformation
+#Requires -Modules ActiveDirectory
 
+[CmdletBinding()]
+param(
+    [ValidateRange(1, 36500)]
+    [int]$InactiveDays = 90,
 
-### SEARCH 90 DAY INACTIVE ACCOUNTS BY OU ###
-Search-ADAccount -SearchBase "OU=name,OU=name,DC=domain,DC=com" `
-                 -UsersOnly `
-                 -AccountInactive `
-                 -TimeSpan 90.00:00:00 | Export-Csv C:\ExportDir\InactiveAccounts.csv -NoTypeInformation
+    [string]$SearchBase,
+
+    [string]$OutputPath
+)
+
+$parameters = @{ UsersOnly = $true; AccountInactive = $true; TimeSpan = [timespan]::FromDays($InactiveDays) }
+if ($SearchBase) { $parameters.SearchBase = $SearchBase }
+$accounts = Search-ADAccount @parameters | Select-Object Name, SamAccountName, Enabled, LastLogonDate, DistinguishedName
+if ($OutputPath) { $accounts | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
+$accounts

@@ -1,25 +1,43 @@
 <#
 .SYNOPSIS
-Renames all files in a directory by applying a sequentially numbered filename pattern.
+    Renames files in a directory to a sequential pattern.
 #>
 
-# Define the directory
-$directory = "/Documents/filedirectory"
-# Get all files in the directory
-$files = Get-ChildItem -Path $directory -File
-# Initialize counter
-$counter = 1
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+param(
+    [Parameter(Mandatory)]
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Container })]
+    [string]$Directory,
 
-# Loop through each file
-foreach ($file in $files) {
-    # Generate new filename with incrementing number
-    $newFileName = "filenameofchoice" + "_" + $counter.ToString("D4") + $file.Extension
-    # Rename the file
-    Rename-Item -Path $file.FullName -NewName $newFileName
-    # Increment counter
-    $counter++
-    # Reset counter if it exceeds 9999
-    #if ($counter -gt 9999) {
-    #    $counter = 1
-    #}
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Prefix,
+
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$StartNumber = 1,
+
+    [ValidateRange(1, 12)]
+    [int]$Padding = 4,
+
+    [string]$Filter = '*'
+)
+
+$files = @(Get-ChildItem -LiteralPath $Directory -Filter $Filter -File | Sort-Object Name)
+$renames = for ($index = 0; $index -lt $files.Count; $index++) {
+    $newName = '{0}_{1}{2}' -f $Prefix, ($StartNumber + $index).ToString("D$Padding"), $files[$index].Extension
+    [pscustomobject]@{ Source = $files[$index]; NewName = $newName; Target = Join-Path $Directory $newName }
 }
+
+foreach ($rename in $renames) {
+    if ((Test-Path -LiteralPath $rename.Target) -and $rename.Source.FullName -ne (Resolve-Path -LiteralPath $rename.Target).Path) {
+        throw "Target file already exists: '$($rename.Target)'."
+    }
+}
+
+foreach ($rename in $renames | Where-Object { $_.Source.Name -ne $_.NewName }) {
+    if ($PSCmdlet.ShouldProcess($rename.Source.FullName, "Rename to '$($rename.NewName)'")) {
+        Rename-Item -LiteralPath $rename.Source.FullName -NewName $rename.NewName -ErrorAction Stop
+    }
+}
+
+$renames | Select-Object @{ Name = 'OldName'; Expression = { $_.Source.Name } }, NewName, Target

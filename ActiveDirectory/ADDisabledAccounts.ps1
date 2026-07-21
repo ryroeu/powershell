@@ -1,9 +1,19 @@
 <#
 .SYNOPSIS
-    Manages active directory disabled accounts.
+    Retrieves disabled Active Directory user accounts.
 #>
 
-### Display Disabled Accounts for OU ###
-Search-ADAccount -SearchBase "OU=name,OU=name,DC=domain,DC=com" `
-                 -UsersOnly `
-                 -AccountDisabled
+#Requires -Modules ActiveDirectory
+
+[CmdletBinding()]
+param(
+    [string]$SearchBase,
+
+    [string]$OutputPath
+)
+
+$parameters = @{ UsersOnly = $true; AccountDisabled = $true }
+if ($SearchBase) { $parameters.SearchBase = $SearchBase }
+$accounts = Search-ADAccount @parameters | Select-Object Name, SamAccountName, DistinguishedName, LastLogonDate
+if ($OutputPath) { $accounts | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding utf8 }
+$accounts
