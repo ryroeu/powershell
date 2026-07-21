@@ -10,25 +10,31 @@ The repository currently contains 250 standalone scripts. It is a script library
 | --- | ---: | --- |
 | [`ActiveDirectory/`](ActiveDirectory/) | 61 | Users and groups, passwords, domain controllers, replication, sites and subnets, OUs, Group Policy, FSMO roles, ADMT preparation, and domain migrations. |
 | [`CertManagement/`](CertManagement/) | 15 | Certificate discovery, expiration reporting and cleanup, certificate requests, imports and exports, and self-signed certificates on Windows, Linux, and macOS. |
+| [`Database/`](Database/) | 3 | SQL Server instance, database, and backup discovery. |
+| [`DeploymentLicensing/`](DeploymentLicensing/) | 4 | Windows unattended deployment media, KMS activation, and local or remote product-key management. |
+| [`DHCP/`](DHCP/) | 3 | DHCP Server installation, configuration, lease reporting, and XML exports. |
 | [`DNS/`](DNS/) | 8 | DNS registration and cache operations, zone exports, stale or domain-controller record cleanup, Azure DNS CAA records, and DNS application load-balancing records. |
+| [`FileManagement/`](FileManagement/) | 14 | Text, XML, and CSV operations; directory reports; duplicate detection; batch renaming; and file ownership. |
 | [`HyperV/`](HyperV/) | 4 | Hyper-V virtual-machine creation, network adapters, snapshots, and Windows Server 2025 VM provisioning. |
 | [`M365/`](M365/) | 18 | Microsoft Graph, Exchange Online, SharePoint Online, Purview, licensing, mailbox auditing and rules, email, recycle-bin cleanup, and Microsoft 365 removal utilities. |
+| [`MonitoringDiagnostics/`](MonitoringDiagnostics/) | 7 | Event logs, reliability data, disk-space alerts, HTTP checks, CHKDSK results, and SMTP notifications. |
 | [`MultiOS/`](MultiOS/) | 19 | Cross-platform inventory, networking, DNS, processes, services, disk information, reboots, cleanup, VPN connectivity, and hardware audits for Windows, Linux, and macOS. |
+| [`Networking/`](Networking/) | 12 | Address and adapter configuration, ARP, IPv4 and IPv6 lease operations, bandwidth measurement, geolocation, and TCP utilities. |
+| [`PowerShell/`](PowerShell/) | 14 | PowerShell installation, modules, repositories, environment configuration, console customization, and reusable examples. |
+| [`RemoteManagement/`](RemoteManagement/) | 15 | WinRM, PowerShell remoting, SSH, RDP, remote file transfer, remote maintenance, and client/server remoting configuration. |
+| [`SecurityHardening/`](SecurityHardening/) | 8 | BitLocker, UAC, TLS, Windows Firewall, CredSSP policy, and server-hardening configuration. |
+| [`ServicesProcesses/`](ServicesProcesses/) | 9 | Service and process discovery, reporting, resource monitoring, start, stop, and termination operations. |
 | [`Sharepoint/`](Sharepoint/) | 2 | SharePoint user and group membership reporting. |
+| [`SystemConfiguration/`](SystemConfiguration/) | 9 | Registry inspection, storage and hibernation configuration, WMI repair, NTP, reboot, and local computer settings. |
+| [`SystemInventory/`](SystemInventory/) | 6 | Computer, BIOS, motherboard, driver, and installed-software inventory. |
+| [`UserManagement/`](UserManagement/) | 5 | Local administrators, user profiles, shell-folder redirection, and logged-on session discovery. |
+| [`WindowsFeatures/`](WindowsFeatures/) | 6 | Windows Server role and feature discovery, installation, and removal, including RSAT and File Services. |
 | [`WindowsUpdate/`](WindowsUpdate/) | 7 | Update history, hotfix searches, patch installation, Windows Update enable/disable operations, and component reset. |
-| Repository root | 116 | General Windows, PowerShell, networking, system, file, database, and remote-administration utilities. |
+| Repository root | 1 | Repository-wide PSScriptAnalyzer entry point and its settings file. |
 
-### General utilities in the repository root
+### Repository organization
 
-The root-level scripts cover several broader areas:
-
-- **System configuration and security** — Windows features, Server hardening, TLS, BitLocker, UAC, firewalls, RDP, NTP, product keys, disk resizing, and unattended Windows Server setup.
-- **Inventory and diagnostics** — Computer, BIOS, motherboard, driver, software, service, event-log, stability, SQL Server, database-backup, and resource-usage information.
-- **Networking and remote management** — IPv4/IPv6 renewal, ARP, DHCP, bandwidth tests, WinRM, PowerShell remoting, SSH configuration, remote file copies, and remote computer maintenance.
-- **Services and processes** — Service start/stop and reporting, process discovery and termination, reboot tools, and remote cleanup.
-- **PowerShell setup and maintenance** — PowerShell installation and configuration, repository and module management, aliases, profiles, context-menu integration, and PSScriptAnalyzer.
-- **Files and data** — CSV comparison and export, text and XML file creation, batch renaming, duplicate-file hashing, ownership changes, and directory reports.
-- **Messaging and databases** — SMTP email utilities, SQL Server discovery and backup checks, and Oracle remediation helpers.
+Scripts are grouped by administrative purpose rather than only by operating system or execution method. The repository root is reserved for documentation, repository configuration, and the repository-wide `PSScriptAnalyzer.ps1` entry point. Companion data files, such as `Networking/GeoLocate.json`, are stored beside the scripts that consume them.
 
 ## Requirements and compatibility
 
@@ -85,13 +91,13 @@ Set-Location ./powershell
 Inspect a script's help before using it:
 
 ```powershell
-Get-Help ./GetComputerInfo.ps1 -Full
+Get-Help ./SystemInventory/GetComputerInfo.ps1 -Full
 ```
 
 Run a script from the repository directory:
 
 ```powershell
-./GetComputerInfo.ps1
+./SystemInventory/GetComputerInfo.ps1
 ```
 
 On Linux or macOS, invoke cross-platform scripts with `pwsh` when necessary:
